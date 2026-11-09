@@ -1,0 +1,20 @@
+# Les cinq fonctions font leur propre contrôle d'accès : jeton secret de la page
+# « Mes accès », secret du webhook Telegram, secret du cron, session du
+# propriétaire vérifiée côté serveur. La passerelle ne doit donc pas exiger de
+# JWT : Telegram, Google et les acheteurs n'en ont pas.
+project_id = "orci"
+
+[functions.paiement]
+verify_jwt = false
+
+[functions.acces]
+verify_jwt = false
+
+[functions.telegram]
+verify_jwt = false
+
+[functions.google]
+verify_jwt = false
+
+[functions.expirations]
+verify_jwt = false

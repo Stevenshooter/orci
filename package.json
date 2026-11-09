@@ -1,0 +1,21 @@
+{
+  "name": "orci",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orci : page de vente, paiement Mobile Money et livraison automatique des accès (Telegram, WhatsApp, Google Drive, Google Meet).",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --dev && node scripts/servir.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
