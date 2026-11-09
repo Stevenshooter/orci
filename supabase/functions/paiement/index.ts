@@ -3,20 +3,30 @@
 // Appelée par la page de paiement, sans compte : verify_jwt = false. Rien ici ne
 // fait confiance au navigateur pour le prix ; il est relu dans `offres`.
 //
+// LA RÉFÉRENCE NE SUFFIT PAS À OUVRIR LES ACCÈS. Elle s'affiche à l'écran, se
+// recopie, part en capture dans un groupe WhatsApp. Le navigateur qui ouvre le
+// paiement reçoit donc une « clé » (la référence signée par un secret de la
+// base) : lui seul récupère le lien d'accès une fois le paiement reçu.
+//
+// EN MODE TEST, SEUL LE PROPRIÉTAIRE « ACHÈTE ». Sinon n'importe quel visiteur
+// s'offrirait la formation d'un clic sur « Paiement réussi ».
+//
 // Actions :
-//   creer   { offre, nom, telephone, operateur, email?, source? } → { reference, mode, url }
-//   statut  { reference }                                          → { statut, jeton? }
-//   simuler { reference, resultat: "paye" | "echec" }              → { statut, jeton? }  (mode test seulement)
+//   creer   { offre, nom, telephone, operateur, email?, source? } → { reference, cle, mode, url }
+//   statut  { reference, cle? }                                    → { statut, jeton?, detenteur, … }
+//   simuler { reference, resultat: "paye" | "echec" }              → { statut }  (mode test, propriétaire)
 //   mode                                                           → { mode }  (« simulation » ou « nexuspay »)
 
 import {
   admin,
   aleatoire,
+  egal,
   emailValide,
   erreur,
   json,
   lireCorps,
   preflight,
+  proprietaire,
   siteUrl,
   telephoneNormalise,
   texte,
@@ -24,8 +34,13 @@ import {
 } from "../_shared/base.ts";
 import { appliquerStatut } from "../_shared/commande.ts";
 import { creerPaiement, modePaiement } from "../_shared/paiement.ts";
+import { signature } from "../_shared/signature.ts";
 
 const OPERATEURS = new Set(["mtn", "orange"]);
+
+function cleDe(reference: string): Promise<string> {
+  return signature(`commande:${reference}`);
+}
 
 Deno.serve(async (req) => {
   const p = preflight(req);
@@ -40,7 +55,7 @@ Deno.serve(async (req) => {
       case "statut":
         return await statut(corps);
       case "simuler":
-        return await simuler(corps);
+        return await simuler(req, corps);
       case "mode":
         return json({ mode: await modePaiement() });
       default:
@@ -73,6 +88,14 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
     .maybeSingle();
   if (!offre || !offre.publiee) return erreur("Cette offre n'existe pas ou n'est plus en vente.", 404);
 
+  const mode = await modePaiement();
+  if (mode === "simulation") {
+    const moi = await proprietaire(req);
+    if (!moi || moi.formateurId !== offre.formateur_id) {
+      return erreur("Les paiements ne sont pas encore ouverts pour cette formation.", 403);
+    }
+  }
+
   // Garde-fou : cinq tentatives par numéro et par quart d'heure.
   const { data: connu } = await admin().from("acheteurs").select("id").eq("telephone", telephone).maybeSingle();
   if (connu) {
@@ -95,7 +118,6 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
     .single();
   if (eA || !acheteur) throw new Error(`Acheteur non enregistré : ${eA?.message}`);
 
-  const mode = await modePaiement();
   const reference = `ORC-${aleatoire(6).toUpperCase()}`;
 
   const { data: commande, error: eC } = await admin()
@@ -134,7 +156,7 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
       .from("commandes")
       .update({ fournisseur_reference: r.fournisseurReference, meta: { creation: r.brut } })
       .eq("id", commande.id);
-    return json({ reference, mode, url: r.url });
+    return json({ reference, cle: await cleDe(reference), mode, url: r.url });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
     await admin().from("commandes").update({ statut: "echec", meta: { erreur: m } }).eq("id", commande.id);
@@ -146,36 +168,53 @@ async function statut(corps: Record<string, unknown>): Promise<Response> {
   const reference = texte(corps.reference, 40);
   const { data: c } = await admin()
     .from("commandes")
-    .select("id, statut, fournisseur, montant, devise, operateur, offres(titre, slug)")
+    .select("id, statut, fournisseur, montant, devise, operateur, offres(titre, slug, formateurs(nom, whatsapp))")
     .eq("reference", reference)
     .maybeSingle();
   if (!c) return erreur("Commande introuvable.", 404);
 
-  let resultat: { statut: string; jeton: string | null } = { statut: c.statut, jeton: null };
-  if (c.statut === "paye") {
+  const cle = texte(corps.cle, 80);
+  const detenteur = cle.length > 0 && egal(cle, await cleDe(reference));
+
+  let etat = c.statut as string;
+  let jeton: string | null = null;
+  if (etat === "paye") {
     const r = await appliquerStatut(c.id, "paye");
-    resultat = { statut: r.statut, jeton: r.jeton };
+    etat = r.statut;
+    if (detenteur) jeton = r.jeton;
   }
   // Nexus Pay : relire ici le statut chez le fournisseur quand la notification tarde.
 
+  // deno-lint-ignore no-explicit-any
+  const o = c.offres as any;
   return json({
-    ...resultat,
+    statut: etat,
+    jeton,
+    detenteur,
     mode: c.fournisseur,
     montant: c.montant,
     devise: c.devise,
     operateur: c.operateur,
-    offre: c.offres,
+    offre: o ? { titre: o.titre, slug: o.slug } : null,
+    formateur: o?.formateurs ?? null,
   });
 }
 
-async function simuler(corps: Record<string, unknown>): Promise<Response> {
+async function simuler(req: Request, corps: Record<string, unknown>): Promise<Response> {
   if ((await modePaiement()) !== "simulation") return erreur("Le mode test est coupé.", 403);
+
+  const moi = await proprietaire(req);
+  if (!moi) return erreur("Connecte-toi à l'espace admin sur cet appareil pour simuler un paiement.", 401);
 
   const reference = texte(corps.reference, 40);
   const voulu = corps.resultat === "paye" ? "paye" : "echec";
-  const { data: c } = await admin().from("commandes").select("id, test").eq("reference", reference).maybeSingle();
-  if (!c || !c.test) return erreur("Commande introuvable.", 404);
+  const { data: c } = await admin()
+    .from("commandes")
+    .select("id, test, formateur_id")
+    .eq("reference", reference)
+    .maybeSingle();
+  if (!c || !c.test || c.formateur_id !== moi.formateurId) return erreur("Commande introuvable.", 404);
 
   const r = await appliquerStatut(c.id, voulu, { simulation: voulu });
-  return json({ statut: r.statut, jeton: r.jeton });
+  return json({ statut: r.statut });
 }

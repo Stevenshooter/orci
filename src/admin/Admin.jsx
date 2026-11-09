@@ -149,7 +149,10 @@ function EspaceProprietaire({ chemin, email }) {
         {mode.donnees === "simulation" ? (
           <div className="bandeau-test bandeau-admin" role="note">
             <Icone nom="info" taille={18} />
-            <span>Mode test : les paiements sont simulés, aucun argent ne bouge. Le vrai paiement s'activera avec Nexus Pay.</span>
+            <span>
+              Mode test : toi seul peux acheter, avec un paiement simulé. Les visiteurs lisent « Les paiements ouvrent
+              bientôt ». Le vrai paiement s'activera avec Nexus Pay.
+            </span>
           </div>
         ) : null}
 

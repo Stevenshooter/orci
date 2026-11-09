@@ -68,6 +68,7 @@ export default function Acheteurs() {
       return (
         a.nom?.toLowerCase().includes(t) ||
         a.email?.toLowerCase().includes(t) ||
+        m.commande?.reference?.toLowerCase().includes(t) ||
         (chiffres.length >= 3 && a.telephone?.includes(chiffres))
       );
     });
@@ -106,7 +107,7 @@ export default function Acheteurs() {
         <input
           className="recherche"
           type="search"
-          placeholder="Nom, numéro ou e-mail"
+          placeholder="Nom, numéro, e-mail ou référence"
           aria-label="Rechercher un acheteur"
           value={texte}
           onChange={(e) => setTexte(e.target.value)}

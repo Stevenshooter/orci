@@ -1,11 +1,15 @@
 // Le formulaire de paiement : nom, numéro Mobile Money, opérateur, Gmail.
+//
+// Tant que le vrai paiement n'est pas branché (mode test), seul le propriétaire
+// connecté voit ce formulaire. Un visiteur lit « Les paiements ouvrent
+// bientôt » et peut laisser un message au formateur.
 
 import { useEffect, useState } from "react";
-import { devinerOperateur, fcfa } from "../lib/format.js";
+import { devinerOperateur, fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
-import { fonction, rpc } from "../lib/supa.js";
-import { coordonneesConnues, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
-import { Bouton, Champ, Chargement, Icone, Message, useDonnees, useTitre } from "../ui.jsx";
+import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
+import { coordonneesConnues, retenirCle, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
+import { Bouton, Champ, Chargement, Icone, LienBouton, Message, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const OPERATEURS = [
@@ -19,6 +23,9 @@ function emailValide(e) {
 
 export default function Paiement({ slug }) {
   const { donnees: offre, erreur: erreurOffre, charge } = useDonnees(() => rpc("offre_publique", { p_slug: slug }), [slug]);
+  // Si le mode ne se lit pas (réseau), le formulaire s'affiche : c'est le
+  // serveur qui tranche de toute façon.
+  const mode = useDonnees(() => fonction("paiement", { action: "mode" }).then((r) => r.mode).catch(() => null), []);
   useTitre(offre ? `Paiement · ${offre.titre}` : "Paiement");
 
   const connu = coordonneesConnues();
@@ -47,11 +54,53 @@ export default function Paiement({ slug }) {
     }
   }, [tel, choisi]);
 
-  if (charge && !offre) return <div className="page page-centree"><Chargement /></div>;
+  if ((charge && !offre) || mode.charge) return <div className="page page-centree"><Chargement /></div>;
   if (erreurOffre) return <div className="page page-etroite"><Message type="erreur" titre="La page n'a pas pu s'ouvrir.">{erreurOffre.message}</Message></div>;
   if (!offre) return <Introuvable texte="Cette formation n'est pas en vente pour le moment." />;
 
   const avecGoogle = (offre.outils || []).some((o) => o.type === "drive" || o.type === "meet");
+  const test = mode.donnees === "simulation";
+  const proprietaire = Boolean(sessionActuelle());
+  const formateur = offre.formateur || {};
+
+  const entete = (
+    <>
+      <Lien className="lien-retour" href={`/o/${offre.slug}${window.location.search}`}>
+        <Icone nom="retour" taille={18} /> Retour à la formation
+      </Lien>
+      <div className="recap">
+        <p className="recap-titre">{offre.titre}</p>
+        <p className="recap-prix">{fcfa(offre.prix)}</p>
+      </div>
+    </>
+  );
+
+  if (test && !proprietaire) {
+    return (
+      <div className="page page-etroite paiement">
+        {entete}
+        <section className="carte bientot">
+          <div className="envoye-icone"><Icone nom="horloge" taille={26} /></div>
+          <h1 className="titre-carte">Les paiements ouvrent bientôt</h1>
+          <p className="texte-doux">
+            Le paiement par Mobile Money n'est pas encore activé pour cette formation.
+            {formateur.whatsapp ? ` Écris à ${formateur.nom} : tu seras prévenu dès l'ouverture.` : " Reviens très vite."}
+          </p>
+          {formateur.whatsapp ? (
+            <LienBouton
+              className="bouton-large"
+              icone="bulle"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={lienWhatsApp(formateur.whatsapp, `Bonjour, je veux rejoindre « ${offre.titre} ». Préviens-moi dès que les paiements ouvrent.`)}
+            >
+              Être prévenu sur WhatsApp
+            </LienBouton>
+          ) : null}
+        </section>
+      </div>
+    );
+  }
 
   function verifier() {
     const e = {};
@@ -79,7 +128,8 @@ export default function Paiement({ slug }) {
         email: email.trim().toLowerCase(),
         source: sourceVisite(),
       };
-      const r = await fonction("paiement", corps);
+      const r = await fonction("paiement", corps, { session: true });
+      retenirCle(r.reference, r.cle);
       retenirCoordonnees({ nom: corps.nom, telephone: tel, operateur, email: corps.email });
       if (r.url) {
         window.location.assign(r.url);
@@ -94,14 +144,14 @@ export default function Paiement({ slug }) {
 
   return (
     <div className="page page-etroite paiement">
-      <Lien className="lien-retour" href={`/o/${offre.slug}${window.location.search}`}>
-        <Icone nom="retour" taille={18} /> Retour à la formation
-      </Lien>
+      {entete}
 
-      <div className="recap">
-        <p className="recap-titre">{offre.titre}</p>
-        <p className="recap-prix">{fcfa(offre.prix)}</p>
-      </div>
+      {test ? (
+        <div className="bandeau-test bandeau-formulaire" role="note">
+          <Icone nom="info" taille={18} />
+          <span>Mode test : toi seul vois ce formulaire, aucun argent ne bouge. Les visiteurs lisent « Les paiements ouvrent bientôt ».</span>
+        </div>
+      ) : null}
 
       <form className="carte formulaire" onSubmit={payer} noValidate>
         <h1 className="titre-carte">Tes informations</h1>

@@ -1,12 +1,15 @@
 // L'attente de la confirmation : la page interroge le statut toutes les trois
 // secondes, et ouvre les accès dès que le paiement est acquis.
+//
+// Le lien d'accès n'est rendu qu'au navigateur qui a lancé le paiement (il en
+// garde la clé). La référence, elle, peut se recopier sans rien ouvrir.
 
 import { useEffect, useRef, useState } from "react";
-import { fcfa } from "../lib/format.js";
+import { fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
-import { fonction } from "../lib/supa.js";
-import { retenirAcces } from "../lib/visiteur.js";
-import { Bouton, Chargement, Icone, Message, useTitre } from "../ui.jsx";
+import { fonction, sessionActuelle } from "../lib/supa.js";
+import { cleConnue, retenirAcces } from "../lib/visiteur.js";
+import { Bouton, Chargement, Icone, LienBouton, Message, useTitre } from "../ui.jsx";
 
 const INTERVALLE = 3000;
 const PATIENCE = 15 * 60 * 1000;
@@ -15,31 +18,34 @@ export default function Attente({ reference }) {
   useTitre("Paiement en cours");
   const [etat, setEtat] = useState(null);
   const [erreur, setErreur] = useState(null);
-  const [simulation, setSimulation] = useState(null);
+  const [envoi, setEnvoi] = useState(null);
+  const [erreurSimulation, setErreurSimulation] = useState(null);
+  const [relance, setRelance] = useState(0);
   const [lassitude, setLassitude] = useState(false);
   const debut = useRef(Date.now());
-
-  async function lire() {
-    try {
-      const r = await fonction("paiement", { action: "statut", reference });
-      setEtat(r);
-      setErreur(null);
-      return r;
-    } catch (e) {
-      setErreur(e);
-      return null;
-    }
-  }
 
   useEffect(() => {
     let fini = false;
     let minuteur;
+
     async function tour() {
-      const r = await lire();
-      if (fini) return;
-      if (r?.statut === "paye" && r.jeton) {
-        retenirAcces(r.offre?.slug, r.jeton);
-        minuteur = setTimeout(() => naviguer(`/acces/${r.jeton}`, { remplacer: true }), 1400);
+      let r = null;
+      try {
+        r = await fonction("paiement", { action: "statut", reference, cle: cleConnue(reference) });
+        if (fini) return;
+        setEtat(r);
+        setErreur(null);
+      } catch (e) {
+        if (fini) return;
+        setErreur(e);
+        if (e.statut === 404) return; // référence inconnue : inutile d'insister
+      }
+
+      if (r?.statut === "paye") {
+        if (r.jeton) {
+          retenirAcces(r.offre?.slug, r.jeton);
+          minuteur = setTimeout(() => naviguer(`/acces/${r.jeton}`, { remplacer: true }), 1400);
+        }
         return;
       }
       if (r && r.statut !== "en_cours") return;
@@ -49,23 +55,25 @@ export default function Attente({ reference }) {
       }
       minuteur = setTimeout(tour, document.hidden ? INTERVALLE * 3 : INTERVALLE);
     }
+
     tour();
     return () => {
       fini = true;
       clearTimeout(minuteur);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reference, simulation]);
+  }, [reference, relance]);
 
   async function simuler(resultat) {
-    setSimulation(resultat);
+    setEnvoi(resultat);
+    setErreurSimulation(null);
     try {
-      await fonction("paiement", { action: "simuler", reference, resultat });
+      await fonction("paiement", { action: "simuler", reference, resultat }, { session: true });
     } catch (e) {
-      setErreur(e);
+      setErreurSimulation(e.message);
+    } finally {
+      setEnvoi(null);
+      setRelance((n) => n + 1);
     }
-    // Relancer la boucle de lecture.
-    setSimulation(`${resultat}-${Date.now()}`);
   }
 
   if (!etat && erreur) {
@@ -80,15 +88,42 @@ export default function Attente({ reference }) {
   if (!etat) return <div className="page page-centree"><Chargement texte="Vérification du paiement…" /></div>;
 
   const test = etat.mode === "simulation";
+  const proprietaire = Boolean(sessionActuelle());
   const slug = etat.offre?.slug;
+  const formateur = etat.formateur || {};
 
   if (etat.statut === "paye") {
+    if (!etat.jeton) {
+      return (
+        <div className="page page-etroite attente">
+          <div className="attente-icone attente-ok"><Icone nom="coche" taille={34} /></div>
+          <h1>Paiement reçu</h1>
+          <p className="attente-texte">
+            Tes accès à « {etat.offre?.titre} » sont ouverts. Par sécurité, ils ne s'affichent que sur le navigateur
+            qui a lancé le paiement : rouvre cette page depuis lui.
+          </p>
+          <p className="attente-texte">Sinon, demande ton lien d'accès au formateur avec ta référence.</p>
+          <p className="attente-reference">Référence : {reference}</p>
+          {formateur.whatsapp ? (
+            <LienBouton
+              className="bouton-large"
+              icone="bulle"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={lienWhatsApp(formateur.whatsapp, `Bonjour, j'ai payé « ${etat.offre?.titre} » (référence ${reference}). Peux-tu m'envoyer mon lien d'accès ?`)}
+            >
+              Demander mon lien sur WhatsApp
+            </LienBouton>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <div className="page page-etroite attente">
         <div className="attente-icone attente-ok"><Icone nom="coche" taille={34} /></div>
         <h1>Paiement reçu</h1>
         <p className="attente-texte">Merci ! Tes accès à « {etat.offre?.titre} » s'ouvrent…</p>
-        {etat.jeton ? <Lien className="bouton bouton-or bouton-large" href={`/acces/${etat.jeton}`}>Ouvrir mes accès</Lien> : null}
+        <Lien className="bouton bouton-or bouton-large" href={`/acces/${etat.jeton}`}>Ouvrir mes accès</Lien>
       </div>
     );
   }
@@ -129,19 +164,41 @@ export default function Attente({ reference }) {
       </p>
       <p className="attente-reference">Référence : {reference}</p>
 
-      {test ? (
+      {test && proprietaire ? (
         <div className="carte simulation">
           <p className="simulation-titre">Simuler la réponse de l'opérateur</p>
           <p className="simulation-texte">En mode test, aucune demande ne part vers un téléphone. Choisis ce qui se passe :</p>
           <div className="rangee">
-            <Bouton variante="or" icone="coche" onClick={() => simuler("paye")} charge={simulation === "paye"}>Paiement réussi</Bouton>
-            <Bouton variante="discret" icone="alerte" onClick={() => simuler("echec")} charge={simulation === "echec"}>Paiement refusé</Bouton>
+            <Bouton variante="or" icone="coche" onClick={() => simuler("paye")} charge={envoi === "paye"} disabled={Boolean(envoi)}>Paiement réussi</Bouton>
+            <Bouton variante="discret" icone="alerte" onClick={() => simuler("echec")} charge={envoi === "echec"} disabled={Boolean(envoi)}>Paiement refusé</Bouton>
           </div>
+          {erreurSimulation ? <Message type="erreur">{erreurSimulation}</Message> : null}
         </div>
+      ) : null}
+      {test && !proprietaire ? (
+        <Message type="info" titre="Paiement de test">
+          Seul le propriétaire peut le simuler : connecte-toi à l'espace admin sur cet appareil, puis reviens ici.
+        </Message>
       ) : null}
 
       {lassitude ? (
-        <Message type="attention" titre="Toujours rien ?" action={<Bouton variante="discret" icone="rafraichir" onClick={() => { debut.current = Date.now(); setLassitude(false); setSimulation(`relance-${Date.now()}`); }}>Vérifier à nouveau</Bouton>}>
+        <Message
+          type="attention"
+          titre="Toujours rien ?"
+          action={
+            <Bouton
+              variante="discret"
+              icone="rafraichir"
+              onClick={() => {
+                debut.current = Date.now();
+                setLassitude(false);
+                setRelance((n) => n + 1);
+              }}
+            >
+              Vérifier à nouveau
+            </Bouton>
+          }
+        >
           Si l'argent est parti mais que rien ne s'ouvre, garde la référence ci-dessus et écris au formateur.
         </Message>
       ) : null}

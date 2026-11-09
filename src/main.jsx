@@ -13,6 +13,13 @@ import { Chargement } from "./ui.jsx";
 // téléphone ne paie pas son poids.
 const Admin = lazy(() => import("./admin/Admin.jsx"));
 
+// Le lien de connexion du propriétaire peut revenir à la racine du site (c'est
+// le réglage « Site URL » de Supabase qui décide) : on le conduit à l'espace
+// admin, qui sait lire la session portée par l'adresse.
+if (/(^#|&)(access_token|error_description)=/.test(window.location.hash) && !window.location.pathname.startsWith("/admin")) {
+  window.history.replaceState(null, "", `/admin${window.location.hash}`);
+}
+
 function App() {
   const { chemin } = useAdresse();
   let p;

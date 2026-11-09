@@ -73,6 +73,25 @@ export function retenirCoordonnees(c) {
   ecrireLocal("orci.acheteur", c);
 }
 
+// La clé d'un paiement en cours. La référence seule n'ouvre rien : c'est cette
+// clé, gardée par le navigateur qui a lancé le paiement, qui rend le lien d'accès.
+const clesEnMemoire = new Map();
+
+export function retenirCle(reference, cle) {
+  if (!reference || !cle) return;
+  clesEnMemoire.set(reference, cle);
+  const connues = lireLocal("orci.paiements");
+  const autres = Array.isArray(connues) ? connues.filter((x) => Array.isArray(x) && x[0] !== reference) : [];
+  ecrireLocal("orci.paiements", [[reference, cle], ...autres].slice(0, 8));
+}
+
+export function cleConnue(reference) {
+  if (clesEnMemoire.has(reference)) return clesEnMemoire.get(reference);
+  const connues = lireLocal("orci.paiements");
+  const trouvee = Array.isArray(connues) ? connues.find((x) => Array.isArray(x) && x[0] === reference) : null;
+  return trouvee ? trouvee[1] : null;
+}
+
 export function accesConnu(slug) {
   const a = lireLocal("orci.acces") || {};
   return typeof a[slug] === "string" ? a[slug] : null;

@@ -206,13 +206,17 @@ export async function supprimer(table, filtre) {
 /**
  * Les fonctions publiques (paiement, accès) n'ont besoin d'aucun jeton ; celles
  * de l'espace admin reçoivent la session, qu'elles vérifient elles-mêmes.
+ *
+ *   admin   : la session est obligatoire.
+ *   session : la session est jointe si elle existe (le propriétaire qui teste
+ *             un achat depuis la page publique).
  */
-export async function fonction(nom, corps = {}, { admin = false } = {}) {
+export async function fonction(nom, corps = {}, { admin = false, session: jointe = false } = {}) {
   const h = { "Content-Type": "application/json" };
-  if (admin) {
+  if (admin || jointe) {
     const t = await jetonValide();
-    if (!t) throw new ErreurApi("Ta session a expiré. Reconnecte-toi.", 401);
-    h.Authorization = `Bearer ${t}`;
+    if (!t && admin) throw new ErreurApi("Ta session a expiré. Reconnecte-toi.", 401);
+    if (t) h.Authorization = `Bearer ${t}`;
   }
   return appeler(`${SUPABASE_URL}/functions/v1/${nom}`, {
     method: "POST",

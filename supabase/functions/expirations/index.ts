@@ -125,9 +125,23 @@ async function nettoyerTests(formateurId: string): Promise<Record<string, number
   const ids = (cs ?? []).map((c: { id: string }) => c.id);
   if (!ids.length) return { retires: 0 };
 
-  const { data: as } = await admin().from("acces").select("id").in("derniere_commande_id", ids);
+  const { data: as } = await admin()
+    .from("acces")
+    .select("id, offre_id, acheteur_id")
+    .in("derniere_commande_id", ids);
   let retires = 0;
   for (const a of as ?? []) {
+    // Un accès acheté pour de vrai, puis « renouvelé » par un achat de test,
+    // reste ouvert : `effacer_donnees_test()` le rend à sa vraie commande.
+    const { count } = await admin()
+      .from("commandes")
+      .select("id", { count: "exact", head: true })
+      .eq("offre_id", a.offre_id)
+      .eq("acheteur_id", a.acheteur_id)
+      .eq("statut", "paye")
+      .eq("test", false);
+    if ((count ?? 0) > 0) continue;
+
     try {
       await retirer(a.id, "revoque");
       retires++;

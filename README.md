@@ -31,8 +31,12 @@ supabase/functions   paiement · acces · telegram · google · expirations (Den
 - **Secrets** : générés par la base dans le schéma `prive` (jamais exposé par l'API).
   Le jeton du bot Telegram et les identifiants Google se collent dans l'espace admin.
 - **Paiement** : mode `simulation` tant que Nexus Pay n'est pas branché
-  (`supabase/functions/_shared/paiement.ts`). Les achats de test sont marqués et
-  s'effacent depuis le tableau de bord.
+  (`supabase/functions/_shared/paiement.ts`). En mode test, seul le propriétaire
+  connecté peut « acheter » ; un visiteur lit « Les paiements ouvrent bientôt ».
+  Les achats de test sont marqués et s'effacent depuis le tableau de bord.
+- **Référence ≠ accès** : le navigateur qui lance un paiement reçoit une clé
+  (la référence signée par un secret de la base). Sans elle, connaître la
+  référence d'une commande payée ne rend pas son lien d'accès.
 
 ## Développer
 

@@ -1226,6 +1226,23 @@ details.avance[open] > summary {
   white-space: nowrap;
 }
 
+.bandeau-formulaire {
+  align-items: flex-start;
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.bandeau-formulaire .icone {
+  margin-top: 2px;
+}
+
+.bientot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
 /* --------------------------------------------------------------- Attente */
 
 .attente {
