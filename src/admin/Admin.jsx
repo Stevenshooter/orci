@@ -7,6 +7,7 @@ import { deconnecter, fonction, lire, rpc, sessionActuelle, sessionDepuisAdresse
 import { Bouton, Chargement, Icone, Message, useDonnees } from "../ui.jsx";
 import Acheteurs from "./Acheteurs.jsx";
 import Connexion from "./Connexion.jsx";
+import { motDePasseConnu, PanneauMotDePasse, reporterMotDePasse } from "./MotDePasse.jsx";
 import Offre from "./Offre.jsx";
 import Outils from "./Outils.jsx";
 import Tableau from "./Tableau.jsx";
@@ -87,7 +88,14 @@ export default function Admin({ chemin }) {
     );
   }
 
-  return <EspaceProprietaire chemin={chemin} email={session.user?.email} />;
+  return (
+    <EspaceProprietaire
+      chemin={chemin}
+      email={session.user?.email}
+      methode={session.methode ?? null}
+      recuperation={Boolean(retour?.recuperation)}
+    />
+  );
 }
 
 /**
@@ -130,7 +138,34 @@ function BandeauPaiement({ etat }) {
   );
 }
 
-function EspaceProprietaire({ chemin, email }) {
+/**
+ * Le mot de passe : demandé après un lien « choisir mon mot de passe », proposé
+ * après une connexion par lien, et toujours à portée depuis l'en-tête.
+ */
+function useMotDePasse({ methode, recuperation }) {
+  const [ouvert, setOuvert] = useState(recuperation || methode === "recovery");
+  const [suggere, setSuggere] = useState(
+    () => !recuperation && methode !== null && methode !== "password" && methode !== "recovery" && !motDePasseConnu(),
+  );
+  return {
+    ouvert,
+    obligatoire: recuperation || methode === "recovery",
+    suggere: suggere && !ouvert,
+    ouvrir: () => setOuvert(true),
+    basculer: () => setOuvert((o) => !o),
+    fermer: () => {
+      setOuvert(false);
+      setSuggere(false);
+    },
+    reporter: () => {
+      reporterMotDePasse();
+      setSuggere(false);
+    },
+  };
+}
+
+function EspaceProprietaire({ chemin, email, methode, recuperation }) {
+  const motDePasse = useMotDePasse({ methode, recuperation });
   const donnees = useDonnees(async () => {
     const [offres, formateurs] = await Promise.all([
       lire("offres?select=*&order=created_at.asc&limit=1"),
@@ -175,6 +210,15 @@ function EspaceProprietaire({ chemin, email }) {
                   <Icone nom="oeil" taille={18} /> <span className="masque-mobile">Voir la page</span>
                 </a>
               ) : null}
+              <button
+                className="lien-discret"
+                type="button"
+                onClick={motDePasse.basculer}
+                aria-expanded={motDePasse.ouvert}
+                title="Créer ou changer ton mot de passe"
+              >
+                <Icone nom="cadenas" taille={18} /> <span className="masque-mobile">Mot de passe</span>
+              </button>
               <button className="lien-discret" type="button" onClick={() => deconnecter()} title={email ? `Connecté : ${email}` : undefined}>
                 <Icone nom="sortie" taille={18} /> <span className="masque-mobile">Déconnexion</span>
               </button>
@@ -191,6 +235,27 @@ function EspaceProprietaire({ chemin, email }) {
         </header>
 
         <BandeauPaiement etat={paiement.donnees} />
+
+        {motDePasse.ouvert ? (
+          <div className="admin-encart">
+            <PanneauMotDePasse email={email} obligatoire={motDePasse.obligatoire} onFermer={motDePasse.fermer} />
+          </div>
+        ) : motDePasse.suggere ? (
+          <div className="admin-encart">
+            <Message
+              type="info"
+              titre="Entre plus vite la prochaine fois"
+              action={
+                <div className="rangee">
+                  <Bouton variante="violet" icone="cadenas" onClick={motDePasse.ouvrir}>Créer mon mot de passe</Bouton>
+                  <Bouton variante="discret" onClick={motDePasse.reporter}>Plus tard</Bouton>
+                </div>
+              }
+            >
+              Avec un mot de passe, tu te connectes sur /connexion sans attendre d'e-mail, et ton téléphone peut le retenir.
+            </Message>
+          </div>
+        ) : null}
 
         <main className="admin-contenu">
           {donnees.charge && !donnees.donnees ? (

@@ -63,17 +63,25 @@ function decoderJwt(jeton) {
   }
 }
 
+/** Comment la session a été ouverte : "password", "otp" (lien), "recovery"… */
+function methodeDe(claims) {
+  const amr = Array.isArray(claims?.amr) ? claims.amr : [];
+  let dernier = null;
+  for (const a of amr) if (a && (!dernier || (a.timestamp ?? 0) > (dernier.timestamp ?? 0))) dernier = a;
+  return typeof dernier?.method === "string" ? dernier.method : null;
+}
+
 function normaliser(j) {
   const maintenant = Math.floor(Date.now() / 1000);
   const expire = j.expires_at ? Number(j.expires_at) : maintenant + Number(j.expires_in || 3600);
   // Le lien magique ne rend que les jetons : l'identité se lit dans le JWT.
-  const claims = j.user ? null : decoderJwt(j.access_token);
+  const claims = decoderJwt(j.access_token);
   const user = j.user
     ? { id: j.user.id, email: j.user.email }
     : claims
       ? { id: claims.sub, email: claims.email }
       : null;
-  return { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: expire, user };
+  return { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: expire, user, methode: methodeDe(claims) };
 }
 
 let rafraichissement = null;
@@ -119,6 +127,12 @@ const MESSAGES_AUTH = {
   over_request_rate_limit: "Trop de tentatives. Attends quelques minutes avant de réessayer.",
   otp_expired: "Ce code a expiré ou n'est pas le bon. Demande un nouveau lien.",
   validation_failed: "Cette adresse e-mail ne semble pas valide.",
+  invalid_credentials:
+    "E-mail ou mot de passe incorrect. Pas encore de mot de passe ? Utilise « Première connexion ou mot de passe oublié ».",
+  email_not_confirmed: "Ton adresse n'est pas encore confirmée : clique d'abord le lien reçu par e-mail.",
+  weak_password: "Mot de passe trop faible : au moins 8 caractères, avec des lettres et des chiffres.",
+  same_password: "C'est déjà ton mot de passe actuel : choisis-en un autre.",
+  reauthentication_needed: "Par sécurité, reconnecte-toi avec un lien reçu par e-mail, puis change ton mot de passe.",
 };
 
 async function lireReponse(r) {
@@ -252,6 +266,40 @@ export async function envoyerLien(email, retour) {
   });
 }
 
+/** Connexion directe, sans e-mail : l'adresse et le mot de passe. */
+export async function connexionMotDePasse(email, motDePasse) {
+  const j = await appeler(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_CLE, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: motDePasse }),
+  });
+  ecrireSession(normaliser(j));
+}
+
+/**
+ * Un lien pour choisir (ou rechoisir) son mot de passe. Il revient sur `retour`
+ * avec une session et `type=recovery` : l'espace admin demande alors le
+ * nouveau mot de passe.
+ */
+export async function envoyerReinitialisation(email, retour) {
+  return appeler(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(retour)}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_CLE, "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** Créer ou changer le mot de passe du compte connecté. */
+export async function definirMotDePasse(motDePasse) {
+  const t = await jetonValide();
+  if (!t) throw new ErreurApi("Ta session a expiré. Reconnecte-toi.", 401);
+  await appeler(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "PUT",
+    headers: { apikey: SUPABASE_CLE, Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ password: motDePasse }),
+  });
+}
+
 export async function verifierCode(email, code) {
   const j = await appeler(`${SUPABASE_URL}/auth/v1/verify`, {
     method: "POST",
@@ -284,8 +332,10 @@ export function sessionDepuisAdresse() {
     expires_at: fragment.get("expires_at"),
     expires_in: fragment.get("expires_in"),
   }));
+  // Un lien « choisir mon mot de passe » : l'espace admin le demandera.
+  const recuperation = fragment.get("type") === "recovery";
   nettoyer();
-  return { ok: true };
+  return { ok: true, recuperation };
 }
 
 export async function deconnecter() {
