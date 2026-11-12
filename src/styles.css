@@ -1651,6 +1651,12 @@ details.avance[open] > summary {
   font-weight: 500;
 }
 
+/* Une adresse longue (webhook) se coupe plutôt que de déborder sur mobile. */
+.code-coupe {
+  word-break: break-all;
+  user-select: all;
+}
+
 .admin-contenu {
   max-width: 1080px;
   margin: 0 auto;
