@@ -29,6 +29,15 @@ function App() {
   if ((p = correspond("/o/:slug/paiement", chemin))) return <Paiement key={p.slug} slug={p.slug} />;
   if ((p = correspond("/paiement/:reference", chemin))) return <Attente key={p.reference} reference={p.reference} />;
   if ((p = correspond("/acces/:jeton", chemin))) return <Acces key={p.jeton} jeton={p.jeton} />;
+  // /connexion : l'adresse courte à garder en favori. Une fois connecté, elle
+  // mène au tableau de bord.
+  if (chemin === "/connexion" || chemin === "/connexion/") {
+    return (
+      <Suspense fallback={<div className="page page-centree"><Chargement /></div>}>
+        <Admin chemin="/admin/connexion" />
+      </Suspense>
+    );
+  }
   if (chemin === "/admin" || chemin.startsWith("/admin/")) {
     return (
       <Suspense fallback={<div className="page page-centree"><Chargement /></div>}>

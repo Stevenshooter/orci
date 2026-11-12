@@ -27,7 +27,13 @@ supabase/functions   paiement · acces · telegram · google · expirations (Den
 ```
 
 - **Acheteurs sans compte** : la page `/acces/<jeton>` est leur clé (48 caractères aléatoires).
-- **Propriétaire** : connexion par lien e-mail. Le premier compte connecté devient propriétaire.
+- **Propriétaire** : connexion sur **`/connexion`** avec e-mail et mot de passe
+  (le téléphone peut le retenir). Première fois ou oubli : « Première connexion ou
+  mot de passe oublié » envoie un lien qui ouvre l'espace et fait choisir le mot de
+  passe. Un lien de connexion sans mot de passe reste possible en secours. Le
+  premier compte connecté devient propriétaire.
+- **E-mails de connexion** : sans serveur d'envoi branché (SMTP), Supabase n'en
+  envoie que deux par heure. Le mot de passe évite d'en dépendre.
 - **Secrets** : générés par la base dans le schéma `prive` (jamais exposé par l'API).
   Le jeton du bot Telegram et les identifiants Google se collent dans l'espace admin.
 - **Paiement** : **NelsiusPay** (MTN MoMo, Orange Money) en checkout hébergé,

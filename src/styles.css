@@ -1553,6 +1553,110 @@ details.avance[open] > summary {
 .connexion {
   display: flex;
   flex-direction: column;
+  max-width: 440px;
+}
+
+.connexion-oubli {
+  align-self: center;
+}
+
+.connexion-retour {
+  align-self: center;
+}
+
+.connexion-pied {
+  margin-top: 18px;
+}
+
+.connexion-separateur {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--encre-3);
+  font-size: 0.85rem;
+}
+
+.connexion-separateur::before,
+.connexion-separateur::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ligne);
+}
+
+/* Un lien qui a l'air d'un lien, sur un bouton. */
+.lien-texte {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--lien);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.lien-texte:hover {
+  color: var(--encre);
+}
+
+/* Le champ mot de passe et son œil pour l'afficher. */
+.champ-mdp {
+  position: relative;
+}
+
+.champ-mdp input {
+  padding-right: 52px;
+}
+
+.champ-mdp-oeil {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--rayon-s);
+  background: none;
+  color: var(--encre-2);
+  cursor: pointer;
+}
+
+.champ-mdp-oeil:hover,
+.champ-mdp-oeil[aria-pressed="true"] {
+  color: var(--lien);
+}
+
+.champ-mdp-oeil:focus-visible {
+  outline: 2px solid var(--violet-clair);
+  outline-offset: 1px;
+}
+
+/* Encart sous l'en-tête de l'admin (mot de passe). */
+.admin-encart {
+  max-width: 1048px;
+  width: calc(100% - 32px);
+  margin: 16px auto 0;
+}
+
+.panneau-mdp {
+  max-width: 520px;
+}
+
+.panneau-mdp-tete {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.envoye-icone-petite {
+  flex: none;
+  width: 40px;
+  height: 40px;
 }
 
 .envoye-icone {
