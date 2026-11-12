@@ -13,7 +13,11 @@
 //                            avant que l'espace admin n'efface ces achats
 
 import { admin, egal, erreur, json, lireCorps, preflight, proprietaire, reglage, texte } from "../_shared/base.ts";
+import { appliquerStatut, CHAMPS_SUIVI, type CommandeSuivie, verifierChezFournisseur } from "../_shared/commande.ts";
 import { livrer, retirer } from "../_shared/livraison.ts";
+
+/** Au-delà, une demande de paiement jamais validée est close. */
+const DUREE_DEMANDE = 72 * 3600_000;
 
 Deno.serve(async (req) => {
   const p = preflight(req);
@@ -106,7 +110,43 @@ async function passeNocturne(): Promise<Record<string, number>> {
     }
   }
 
-  return { expires: finis?.length ?? 0, rejoues };
+  const paiements = await rattraperPaiements();
+
+  return { expires: finis?.length ?? 0, rejoues, ...paiements };
+}
+
+/**
+ * Les paiements restés « en cours ». Une notification NelsiusPay perdue, un
+ * acheteur qui ferme la page avant la fin : NelsiusPay est relu pour chacun, et
+ * l'accès s'ouvre même si personne ne regarde. Passé 72 h sans réponse, la
+ * demande est close.
+ */
+async function rattraperPaiements(): Promise<Record<string, number>> {
+  const limite = Date.now() - DUREE_DEMANDE;
+  let confirmes = 0;
+  let clos = 0;
+
+  const { data: enCours } = await admin()
+    .from("commandes")
+    .select(`${CHAMPS_SUIVI}, created_at`)
+    .eq("statut", "en_cours")
+    .order("created_at", { ascending: true })
+    .limit(200);
+
+  for (const c of (enCours ?? []) as (CommandeSuivie & { created_at: string })[]) {
+    try {
+      const r = c.fournisseur === "nelsius" ? await verifierChezFournisseur(c) : null;
+      if (r) {
+        confirmes++;
+      } else if (new Date(c.created_at).getTime() < limite) {
+        await appliquerStatut(c.id, "expire", { expire_par: "passe_horaire" });
+        clos++;
+      }
+    } catch (e) {
+      console.error(`[expirations] paiement ${c.reference} :`, e instanceof Error ? e.message : e);
+    }
+  }
+  return { paiements_confirmes: confirmes, paiements_clos: clos };
 }
 
 /**

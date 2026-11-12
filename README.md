@@ -30,10 +30,16 @@ supabase/functions   paiement · acces · telegram · google · expirations (Den
 - **Propriétaire** : connexion par lien e-mail. Le premier compte connecté devient propriétaire.
 - **Secrets** : générés par la base dans le schéma `prive` (jamais exposé par l'API).
   Le jeton du bot Telegram et les identifiants Google se collent dans l'espace admin.
-- **Paiement** : mode `simulation` tant que Nexus Pay n'est pas branché
-  (`supabase/functions/_shared/paiement.ts`). En mode test, seul le propriétaire
-  connecté peut « acheter » ; un visiteur lit « Les paiements ouvrent bientôt ».
-  Les achats de test sont marqués et s'effacent depuis le tableau de bord.
+- **Paiement** : **NelsiusPay** (MTN MoMo, Orange Money) en checkout hébergé,
+  dès que sa clé est posée ; mode `simulation` sinon
+  (`supabase/functions/_shared/paiement.ts` et `nelsius.ts`). Une clé `sk_test_`
+  ouvre le bac à sable : comme en simulation, seul le propriétaire connecté peut
+  « acheter » et un visiteur lit « Les paiements ouvrent bientôt ». Les achats de
+  test sont marqués et s'effacent depuis le tableau de bord.
+- **Un paiement n'est acquis que si NelsiusPay le confirme** : le retour de
+  l'acheteur, la notification (webhook) et la passe horaire relisent tous le
+  statut chez NelsiusPay avant d'ouvrir un accès (bonne commande, bon montant).
+  Une demande restée sans réponse 72 h est close.
 - **Référence ≠ accès** : le navigateur qui lance un paiement reçoit une clé
   (la référence signée par un secret de la base). Sans elle, connaître la
   référence d'une commande payée ne rend pas son lien d'accès.
@@ -70,6 +76,24 @@ Dans **Authentication → URL Configuration**, mets l'adresse du site dans
 
 **Vercel** : importer le dépôt, rien à régler (`vercel.json` s'en charge).
 
+## Brancher NelsiusPay
+
+1. Dans NelsiusPay → **Clés API**, copie la clé secrète **de test** (`sk_test_…`).
+2. Dans Supabase → **Edge Functions → Secrets**, ajoute :
+   - `NELSIUS_API_KEY` = la clé `sk_test_…`
+   - `NELSIUS_WEBHOOK_SECRET` = le secret de signature des webhooks NelsiusPay
+3. Dans NelsiusPay → **Paramètres → Webhooks**, colle l'adresse
+   `https://<ref>.supabase.co/functions/v1/paiement` (l'espace admin l'affiche).
+4. **Teste** depuis la page de vente, connecté en propriétaire sur le même
+   appareil : un numéro qui finit par `000` réussit, par `111` échoue. Une
+   demande restée en attente se force depuis la page d'attente.
+5. **Ouvre les ventes** : remplace la clé par `sk_live_…`, puis efface les
+   achats de test depuis le tableau de bord.
+
+Les secrets se lisent à chaque appel : aucun redéploiement. Pour revenir à la
+simulation sans retirer la clé : `select public.definir_reglage('paiement_mode', 'simulation');`
+(et `select public.oublier_reglage('paiement_mode');` pour annuler).
+
 ## Brancher les outils (espace admin → Outils)
 
 1. **Telegram** : crée un bot avec @BotFather, colle son jeton, fais-le
@@ -81,5 +105,6 @@ Dans **Authentication → URL Configuration**, mets l'adresse du site dans
 
 ## Reste à faire
 
-- Brancher **Nexus Pay** (création de transaction, notification, vérification).
 - Plusieurs formateurs : le schéma est prêt (`formateurs`, `commission`), l'interface non.
+- DirectPay NelsiusPay (la demande part sur le téléphone sans quitter Orci) :
+  réservé en production aux comptes entreprise vérifiés (RCCM / NIF).

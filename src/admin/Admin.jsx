@@ -90,6 +90,46 @@ export default function Admin({ chemin }) {
   return <EspaceProprietaire chemin={chemin} email={session.user?.email} />;
 }
 
+/**
+ * Où en est l'encaissement : simulation, bac à sable NelsiusPay, ou ventes
+ * réelles. Rien ne s'affiche quand tout est prêt.
+ */
+function BandeauPaiement({ etat }) {
+  if (!etat) return null;
+  const nelsius = etat.mode === "nelsius";
+  const sansSignature = nelsius && etat.signature === false;
+  const reel = nelsius && !etat.test;
+  if (reel && !sansSignature) return null;
+
+  let texte;
+  if (!nelsius) {
+    texte =
+      "Mode test : toi seul peux acheter, avec un paiement simulé. Les visiteurs lisent « Les paiements ouvrent bientôt ». " +
+      "Le vrai paiement s'active dès que ta clé NelsiusPay est posée dans les secrets Supabase (NELSIUS_API_KEY).";
+  } else if (!reel) {
+    texte =
+      "Bac à sable NelsiusPay (clé sk_test_) : toi seul peux acheter, aucun argent ne bouge. " +
+      "Remplace la clé par ta clé sk_live_ pour ouvrir les ventes.";
+  } else {
+    texte = "Les ventes sont ouvertes, mais les notifications NelsiusPay ne sont pas signées.";
+  }
+
+  return (
+    <div className="bandeau-test bandeau-admin" role="note">
+      <Icone nom="info" taille={18} />
+      <span>
+        {texte}
+        {sansSignature ? " Pose aussi le secret du webhook (NELSIUS_WEBHOOK_SECRET)." : ""}
+        {nelsius && etat.webhook ? (
+          <>
+            {" "}Adresse du webhook à coller dans NelsiusPay : <code className="code-coupe">{etat.webhook}</code>
+          </>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 function EspaceProprietaire({ chemin, email }) {
   const donnees = useDonnees(async () => {
     const [offres, formateurs] = await Promise.all([
@@ -98,7 +138,11 @@ function EspaceProprietaire({ chemin, email }) {
     ]);
     return { offre: offres[0] ?? null, formateur: formateurs[0] ?? null };
   }, []);
-  const mode = useDonnees(() => fonction("paiement", { action: "mode" }).then((r) => r.mode).catch(() => "simulation"), []);
+  const paiement = useDonnees(
+    () => fonction("paiement", { action: "mode" }, { session: true }).catch(() => ({ mode: "simulation", test: true })),
+    [],
+  );
+  const mode = paiement.donnees?.mode ?? null;
 
   const page = {
     "/admin": Tableau,
@@ -117,7 +161,7 @@ function EspaceProprietaire({ chemin, email }) {
   const actif = chemin === "/admin/connexion" ? "/admin" : chemin.replace(/\/+$/, "");
 
   return (
-    <ContexteAdmin.Provider value={{ ...(donnees.donnees ?? {}), recharger: donnees.recharger, mode: mode.donnees }}>
+    <ContexteAdmin.Provider value={{ ...(donnees.donnees ?? {}), recharger: donnees.recharger, mode }}>
       <div className="admin">
         <header className="admin-entete">
           <div className="admin-entete-ligne">
@@ -146,15 +190,7 @@ function EspaceProprietaire({ chemin, email }) {
           </nav>
         </header>
 
-        {mode.donnees === "simulation" ? (
-          <div className="bandeau-test bandeau-admin" role="note">
-            <Icone nom="info" taille={18} />
-            <span>
-              Mode test : toi seul peux acheter, avec un paiement simulé. Les visiteurs lisent « Les paiements ouvrent
-              bientôt ». Le vrai paiement s'activera avec Nexus Pay.
-            </span>
-          </div>
-        ) : null}
+        <BandeauPaiement etat={paiement.donnees} />
 
         <main className="admin-contenu">
           {donnees.charge && !donnees.donnees ? (

@@ -1,20 +1,24 @@
 // Orci — l'encaissement, derrière une seule porte.
 //
 // DEUX FOURNISSEURS, UNE INTERFACE.
-//   · « simulation » : le mode test. Aucun argent ne bouge ; la page d'attente
-//     propose « Paiement réussi » ou « Paiement refusé ». Les commandes sont
-//     marquées `test` et s'effacent d'un geste avant le lancement.
-//   · « nexuspay » : l'agrégateur réel, à brancher. Tant qu'il ne l'est pas,
-//     rien ne peut basculer en production : `modePaiement()` refuse de rendre
-//     un mode dont le fournisseur n'est pas prêt.
+//   · « simulation » : le mode test sans fournisseur. Aucun argent ne bouge ; la
+//     page d'attente propose « Paiement réussi » ou « Paiement refusé ».
+//   · « nelsius » : NelsiusPay, l'agrégateur réel (MTN MoMo, Orange Money).
+//     Avec une clé sk_test_, c'est son bac à sable : toujours un test.
 //
-// Le mode se lit dans `prive.reglages` (clé `paiement_mode`), pas dans le code :
-// passer en réel ne demandera aucun redéploiement.
+// LE MODE SE CHOISIT SANS REDÉPLOYER. NelsiusPay prend la main dès que sa clé
+// secrète est posée dans les secrets des fonctions (NELSIUS_API_KEY) ; la retirer
+// ramène à la simulation. Le réglage `paiement_mode` = 'simulation' (dans
+// `prive.reglages`) force la simulation même avec une clé posée.
+//
+// Une commande de test (simulation ou bac à sable) est marquée `test`, réservée
+// au propriétaire connecté, et s'efface d'un geste avant le lancement.
 
 import { reglage } from "./base.ts";
+import { creerSessionNelsius, nelsiusPret, nelsiusReel } from "./nelsius.ts";
 
 export type Statut = "en_cours" | "paye" | "echec" | "annule" | "expire" | "rembourse";
-export type Mode = "simulation" | "nexuspay";
+export type Mode = "simulation" | "nelsius";
 
 export interface DemandePaiement {
   readonly reference: string;
@@ -27,8 +31,8 @@ export interface DemandePaiement {
   readonly email?: string | null;
   /** Où renvoyer l'acheteur après le paiement. */
   readonly retourUrl: string;
-  /** Où le fournisseur annonce le résultat. */
-  readonly notificationUrl: string;
+  /** Où le renvoyer s'il abandonne sur la page du fournisseur. */
+  readonly annulationUrl: string;
 }
 
 export interface ReponsePaiement {
@@ -56,41 +60,27 @@ export function rangStatut(s: string): number {
 }
 
 export async function modePaiement(): Promise<Mode> {
-  const m = (await reglage("paiement_mode")) ?? "simulation";
-  if (m === "nexuspay" && nexusPayPret()) return "nexuspay";
-  return "simulation";
+  const force = await reglage("paiement_mode");
+  if (force === "simulation") return "simulation";
+  return nelsiusPret() ? "nelsius" : "simulation";
+}
+
+/** Aucun argent ne bouge : simulation, ou NelsiusPay avec une clé de bac à sable. */
+export function paiementDeTest(mode: Mode): boolean {
+  return mode === "simulation" || !nelsiusReel();
 }
 
 // ---------------------------------------------------------------------------
-// Simulation
-// ---------------------------------------------------------------------------
 
-function creerSimulation(d: DemandePaiement): ReponsePaiement {
+export async function creerPaiement(mode: Mode, d: DemandePaiement): Promise<ReponsePaiement> {
+  if (mode === "nelsius") {
+    const s = await creerSessionNelsius(d);
+    return { fournisseurReference: s.transactionCode, url: s.url, statut: "en_cours", brut: s.brut };
+  }
   return {
     fournisseurReference: `SIM-${d.reference}`,
     url: null,
     statut: "en_cours",
     brut: { simulation: true, operateur: d.operateur },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Nexus Pay — à brancher avec ses clés et sa documentation.
-// ---------------------------------------------------------------------------
-
-function nexusPayPret(): boolean {
-  return Boolean(Deno.env.get("NEXUSPAY_API_KEY"));
-}
-
-function creerNexusPay(_d: DemandePaiement): Promise<ReponsePaiement> {
-  // L'appel réel s'écrira ici : création de la transaction, référence Orci dans
-  // les métadonnées, notificationUrl vers la fonction `paiement`.
-  return Promise.reject(new Error("Nexus Pay n'est pas encore branché."));
-}
-
-// ---------------------------------------------------------------------------
-
-export async function creerPaiement(mode: Mode, d: DemandePaiement): Promise<ReponsePaiement> {
-  if (mode === "nexuspay") return await creerNexusPay(d);
-  return creerSimulation(d);
 }

@@ -1,6 +1,9 @@
 // Le formulaire de paiement : nom, numéro Mobile Money, opérateur, Gmail.
 //
-// Tant que le vrai paiement n'est pas branché (mode test), seul le propriétaire
+// Avec NelsiusPay, l'acheteur passe ensuite sur la page sécurisée NelsiusPay
+// pour valider, puis revient sur la page d'attente d'Orci.
+//
+// En mode test (simulation, ou bac à sable NelsiusPay), seul le propriétaire
 // connecté voit ce formulaire. Un visiteur lit « Les paiements ouvrent
 // bientôt » et peut laisser un message au formateur.
 
@@ -25,7 +28,7 @@ export default function Paiement({ slug }) {
   const { donnees: offre, erreur: erreurOffre, charge } = useDonnees(() => rpc("offre_publique", { p_slug: slug }), [slug]);
   // Si le mode ne se lit pas (réseau), le formulaire s'affiche : c'est le
   // serveur qui tranche de toute façon.
-  const mode = useDonnees(() => fonction("paiement", { action: "mode" }).then((r) => r.mode).catch(() => null), []);
+  const mode = useDonnees(() => fonction("paiement", { action: "mode" }).catch(() => null), []);
   useTitre(offre ? `Paiement · ${offre.titre}` : "Paiement");
 
   const connu = coordonneesConnues();
@@ -59,7 +62,8 @@ export default function Paiement({ slug }) {
   if (!offre) return <Introuvable texte="Cette formation n'est pas en vente pour le moment." />;
 
   const avecGoogle = (offre.outils || []).some((o) => o.type === "drive" || o.type === "meet");
-  const test = mode.donnees === "simulation";
+  const nelsius = mode.donnees?.mode === "nelsius";
+  const test = mode.donnees ? (mode.donnees.test ?? mode.donnees.mode === "simulation") : false;
   const proprietaire = Boolean(sessionActuelle());
   const formateur = offre.formateur || {};
 
@@ -149,7 +153,14 @@ export default function Paiement({ slug }) {
       {test ? (
         <div className="bandeau-test bandeau-formulaire" role="note">
           <Icone nom="info" taille={18} />
-          <span>Mode test : toi seul vois ce formulaire, aucun argent ne bouge. Les visiteurs lisent « Les paiements ouvrent bientôt ».</span>
+          {nelsius ? (
+            <span>
+              Bac à sable NelsiusPay : toi seul vois ce formulaire, aucun argent ne bouge. Un numéro qui finit par 000
+              simule un paiement réussi, par 111 un refus.
+            </span>
+          ) : (
+            <span>Mode test : toi seul vois ce formulaire, aucun argent ne bouge. Les visiteurs lisent « Les paiements ouvrent bientôt ».</span>
+          )}
         </div>
       ) : null}
 
@@ -226,8 +237,9 @@ export default function Paiement({ slug }) {
           Payer {fcfa(offre.prix)}
         </Bouton>
         <p className="mention">
-          Une demande de paiement arrive sur ton téléphone : tu la valides avec ton code secret Mobile Money. Ton code
-          ne s'écrit jamais sur cette page.
+          {nelsius
+            ? "Tu passes ensuite sur la page sécurisée NelsiusPay : la demande arrive sur ton téléphone et tu la valides avec ton code secret Mobile Money. Ton code ne s'écrit jamais sur Orci."
+            : "Une demande de paiement arrive sur ton téléphone : tu la valides avec ton code secret Mobile Money. Ton code ne s'écrit jamais sur cette page."}
         </p>
       </form>
     </div>

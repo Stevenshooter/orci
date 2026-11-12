@@ -3,6 +3,9 @@
 //
 // Le lien d'accès n'est rendu qu'au navigateur qui a lancé le paiement (il en
 // garde la clé). La référence, elle, peut se recopier sans rien ouvrir.
+//
+// L'acheteur qui abandonne sur la page NelsiusPay revient ici avec ?annule=1 :
+// le premier tour le signale, et la demande est close si rien n'a été payé.
 
 import { useEffect, useRef, useState } from "react";
 import { fcfa, lienWhatsApp } from "../lib/format.js";
@@ -23,6 +26,8 @@ export default function Attente({ reference }) {
   const [relance, setRelance] = useState(0);
   const [lassitude, setLassitude] = useState(false);
   const debut = useRef(Date.now());
+  // startsWith : un fournisseur peut coller ses propres paramètres derrière (?annule=1?status=…).
+  const abandon = useRef((new URLSearchParams(window.location.search).get("annule") ?? "").startsWith("1"));
 
   useEffect(() => {
     let fini = false;
@@ -30,8 +35,14 @@ export default function Attente({ reference }) {
 
     async function tour() {
       let r = null;
+      const corps = { action: "statut", reference, cle: cleConnue(reference) };
+      if (abandon.current) {
+        corps.annule = true;
+        abandon.current = false;
+        window.history.replaceState(null, "", window.location.pathname);
+      }
       try {
-        r = await fonction("paiement", { action: "statut", reference, cle: cleConnue(reference) });
+        r = await fonction("paiement", corps);
         if (fini) return;
         setEtat(r);
         setErreur(null);
@@ -87,7 +98,8 @@ export default function Attente({ reference }) {
   }
   if (!etat) return <div className="page page-centree"><Chargement texte="Vérification du paiement…" /></div>;
 
-  const test = etat.mode === "simulation";
+  const test = etat.test ?? etat.mode === "simulation";
+  const nelsius = etat.mode === "nelsius";
   const proprietaire = Boolean(sessionActuelle());
   const slug = etat.offre?.slug;
   const formateur = etat.formateur || {};
@@ -150,7 +162,7 @@ export default function Attente({ reference }) {
     <div className="page page-etroite attente">
       {test ? (
         <div className="bandeau-test" role="note">
-          <Icone nom="info" taille={18} /> Mode test : aucun argent ne bouge.
+          <Icone nom="info" taille={18} /> {nelsius ? "Bac à sable NelsiusPay" : "Mode test"} : aucun argent ne bouge.
         </div>
       ) : null}
 
@@ -167,7 +179,11 @@ export default function Attente({ reference }) {
       {test && proprietaire ? (
         <div className="carte simulation">
           <p className="simulation-titre">Simuler la réponse de l'opérateur</p>
-          <p className="simulation-texte">En mode test, aucune demande ne part vers un téléphone. Choisis ce qui se passe :</p>
+          <p className="simulation-texte">
+            {nelsius
+              ? "Bac à sable NelsiusPay : si la demande reste en attente, force sa réponse. Tout passe par NelsiusPay, comme un vrai paiement."
+              : "En mode test, aucune demande ne part vers un téléphone. Choisis ce qui se passe :"}
+          </p>
           <div className="rangee">
             <Bouton variante="or" icone="coche" onClick={() => simuler("paye")} charge={envoi === "paye"} disabled={Boolean(envoi)}>Paiement réussi</Bouton>
             <Bouton variante="discret" icone="alerte" onClick={() => simuler("echec")} charge={envoi === "echec"} disabled={Boolean(envoi)}>Paiement refusé</Bouton>
