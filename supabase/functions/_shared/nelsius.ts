@@ -113,6 +113,8 @@ export interface DemandeNelsius {
   readonly description: string;
   /** En chiffres, indicatif compris : 2376XXXXXXXX. */
   readonly telephone: string;
+  /** Le pays choisi sur Orci : la page NelsiusPay s'ouvre sur ses moyens de paiement. */
+  readonly pays?: string | null;
   readonly nom: string;
   readonly email?: string | null;
   readonly retourUrl: string;
@@ -134,7 +136,7 @@ export async function creerSessionNelsius(d: DemandeNelsius): Promise<SessionNel
     customer_name: d.nom,
     customer_phone: `+${d.telephone}`,
     ...(d.email ? { customer_email: d.email } : {}),
-    ...(d.telephone.startsWith("237") ? { default_country: "CM" } : {}),
+    ...(d.pays ? { default_country: d.pays } : d.telephone.startsWith("237") ? { default_country: "CM" } : {}),
     return_url: d.retourUrl,
     cancel_url: d.annulationUrl,
     metadata: { orci_reference: d.reference },

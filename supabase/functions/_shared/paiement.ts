@@ -26,6 +26,8 @@ export interface DemandePaiement {
   readonly devise: string;
   readonly description: string;
   readonly telephone: string;
+  /** Le pays choisi par l'acheteur (code ISO à deux lettres), s'il l'a donné. */
+  readonly pays?: string | null;
   readonly operateur: string;
   readonly nom: string;
   readonly email?: string | null;

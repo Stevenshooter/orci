@@ -1208,19 +1208,13 @@ details.avance[open] > summary {
 /* ------------------------------------------------- Moyens de paiement (logos) */
 
 .moyens {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-@media (min-width: 640px) {
-  .moyens {
-    grid-template-columns: repeat(8, auto);
-  }
 }
 
 .moyens li {
@@ -1248,6 +1242,24 @@ details.avance[open] > summary {
   object-fit: contain;
 }
 
+/* Un opérateur sans logo : son nom, en toutes lettres. */
+.moyens li.moyen-texte {
+  display: grid;
+  place-items: center;
+  padding: 3px 4px;
+}
+
+.moyen-texte span {
+  color: #17151d;
+  font: 700 0.6rem/1.1 var(--texte);
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.moyens-petit .moyen-texte span {
+  font-size: 0.54rem;
+}
+
 .moyens-petit {
   gap: 6px;
 }
@@ -1263,8 +1275,58 @@ details.avance[open] > summary {
 }
 
 .moyens-bloc .moyens {
-  grid-template-columns: repeat(auto-fill, 58px);
-  justify-content: start;
+  justify-content: flex-start;
+}
+
+/* Le numéro, précédé de l'indicatif du pays choisi. */
+.champ-tel {
+  display: flex;
+  align-items: stretch;
+}
+
+.champ-tel-prefixe {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 64px;
+  padding: 0 12px;
+  border: 1px solid var(--ligne-2);
+  border-right: 0;
+  border-radius: var(--rayon-m) 0 0 var(--rayon-m);
+  background: var(--releve);
+  color: var(--encre-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.champ-tel input {
+  border-radius: 0 var(--rayon-m) var(--rayon-m) 0;
+}
+
+.champ-erreur .champ-tel-prefixe {
+  border-color: var(--erreur);
+}
+
+/* Dans la carte de l'offre : « Tu paies depuis [pays] ». */
+.v-offre-pays {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+  margin-top: 16px;
+  color: var(--encre-2);
+  font-size: 0.86rem;
+}
+
+.v-offre-pays select {
+  width: auto;
+  min-height: 38px;
+  padding: 6px 30px 6px 12px;
+  border-radius: 999px;
+  border-color: rgb(255 255 255 / 0.14);
+  background-color: rgb(255 255 255 / 0.04);
+  font-size: 0.88rem;
 }
 
 .moyens-petit li {
