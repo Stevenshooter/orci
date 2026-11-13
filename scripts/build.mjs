@@ -79,8 +79,11 @@ async function offrePubliee() {
 }
 
 const offre = await offrePubliee();
+// Les astérisques marquent le mot doré de la page : pas dans les aperçus de partage.
+const sansAccent = (t) => String(t ?? "").replace(/\*/g, "");
+if (offre) offre.titre = sansAccent(offre.titre);
 const titre = offre ? `${offre.titre} · ${offre.formateur?.nom ?? "Orci"}` : "Orci";
-const description = offre?.sous_titre || "Paiement Mobile Money et accès immédiat à la formation.";
+const description = sansAccent(offre?.sous_titre) || "Paiement Mobile Money et accès immédiat à la formation.";
 const prix = offre ? `${String(offre.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA` : null;
 const meta = [
   `<title>${echapper(titre)}</title>`,

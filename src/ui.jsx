@@ -34,6 +34,10 @@ const TRACES = {
   rafraichir: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
   etoile: "m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z",
   envoi: "M4 12h12m-5-6 6 6-6 6M20 5v14",
+  chevron: "m6 9 6 6 6-6",
+  bouclier: "M12 3 4.5 6v5.5c0 4.4 3.1 8.4 7.5 9.5 4.4-1.1 7.5-5.1 7.5-9.5V6zM9 12l2 2 4-4",
+  eclair: "M13 2 4.5 13.5H12L11 22l8.5-11.5H12z",
+  carte: "M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5zM3 10h18M7 15h3",
 };
 
 export function Icone({ nom, taille = 20, className = "", titre }) {
