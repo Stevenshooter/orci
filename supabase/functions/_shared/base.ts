@@ -126,6 +126,53 @@ export function telephoneNormalise(brut: string): string | null {
   return /^[0-9]{8,15}$/.test(n) ? n : null;
 }
 
+/**
+ * Les pays où NelsiusPay encaisse : leur indicatif, et si le 0 du début fait
+ * partie du numéro international (Côte d'Ivoire, Bénin, Congo : +225 07…).
+ */
+const PAYS: Record<string, { indicatif: string; zero?: true }> = {
+  CM: { indicatif: "237" },
+  BJ: { indicatif: "229", zero: true },
+  CG: { indicatif: "242", zero: true },
+  CI: { indicatif: "225", zero: true },
+  CD: { indicatif: "243" },
+  GH: { indicatif: "233" },
+  KE: { indicatif: "254" },
+  LR: { indicatif: "231" },
+  MW: { indicatif: "265" },
+  MZ: { indicatif: "258" },
+  NG: { indicatif: "234" },
+  RW: { indicatif: "250" },
+  SN: { indicatif: "221" },
+  SL: { indicatif: "232" },
+  TZ: { indicatif: "255" },
+  UG: { indicatif: "256" },
+  ZM: { indicatif: "260" },
+};
+
+export function paysConnu(code: string): string | null {
+  const c = code.toUpperCase();
+  return PAYS[c] ? c : null;
+}
+
+/**
+ * Le numéro tapé dans le pays choisi, au format international en chiffres.
+ * « +… » ou « 00… » : le numéro est déjà complet. Sinon l'indicatif est ajouté
+ * (une seule fois), après avoir ôté le 0 local quand le pays le retire.
+ */
+export function telephoneDuPays(brut: string, pays: string): string | null {
+  const p = PAYS[pays];
+  if (!p) return telephoneNormalise(brut);
+  const complet = /^\s*(\+|00)/.test(brut);
+  let n = String(brut ?? "").replace(/\D/g, "");
+  if (complet) n = n.replace(/^00/, "");
+  else if (!(n.startsWith(p.indicatif) && n.length >= p.indicatif.length + 8)) {
+    if (!p.zero) n = n.replace(/^0+/, "");
+    n = `${p.indicatif}${n}`;
+  }
+  return /^[0-9]{8,15}$/.test(n) ? n : null;
+}
+
 export function emailValide(brut: string): string | null {
   const e = String(brut ?? "").trim().toLowerCase();
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e.length <= 254 ? e : null;

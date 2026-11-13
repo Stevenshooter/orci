@@ -6,11 +6,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fcfa, lienWhatsApp, nombre } from "../lib/format.js";
+import { nomMoyen, paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
 import { Lien } from "../lib/routeur.jsx";
 import { rpc } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { accesConnu, idVisiteur, sourceVisite } from "../lib/visiteur.js";
-import { Chargement, Icone, ICONE_OUTIL, Message, MoyensPaiement, useDonnees, useTitre } from "../ui.jsx";
+import { Chargement, Icone, ICONE_OUTIL, Message, MoyensPaiement, SelectPays, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const PROMESSE = {
@@ -164,6 +165,13 @@ export default function Vente({ slug }) {
   const racine = useRef(null);
   useApparition(racine, offre?.id);
 
+  // Le pays de l'acheteur décide des moyens de paiement montrés.
+  const [pays, setPays] = useState(paysParDefaut);
+  const changerPays = (code) => {
+    setPays(code);
+    retenirPays(code);
+  };
+
   const heros = useRef(null);
   const [barre, setBarre] = useState(false);
   useEffect(() => {
@@ -207,10 +215,12 @@ export default function Vente({ slug }) {
       : "à vie";
   const modalite = mensuel ? `par mois · accès ${acces}` : `paiement unique · accès ${acces}`;
 
+  const lieu = paysDe(pays);
+  const mobileMoney = lieu.operateurs.map(nomMoyen);
   const questions = [
     {
       q: "Comment je paie ?",
-      r: "Sur la page de paiement sécurisée NelsiusPay, tu choisis : Mobile Money (MTN et Orange au Cameroun, et aussi Moov, Airtel ou Wave dans les autres pays couverts), carte Visa ou Mastercard, ou PayPal. Tes codes ne s'écrivent jamais sur cette page.",
+      r: `Choisis ton pays : tu vois les moyens de paiement disponibles chez toi. ${lieu.chez[0].toUpperCase()}${lieu.chez.slice(1)} : ${mobileMoney.join(", ")}, la carte Visa ou Mastercard, et PayPal. Tu paies sur la page sécurisée NelsiusPay : tes codes ne s'écrivent jamais sur cette page.`,
     },
     {
       q: "Quand est-ce que j'ai accès à la formation ?",
@@ -289,7 +299,7 @@ export default function Vente({ slug }) {
           <Icone nom="fleche" taille={18} />
         </Lien>
         <p className="v-rassure">Paiement sécurisé · Accès immédiat</p>
-        <MoyensPaiement />
+        <MoyensPaiement pays={pays} />
       </section>
 
       {preuves.length ? (
@@ -315,7 +325,11 @@ export default function Vente({ slug }) {
             <Icone nom="fleche" taille={18} />
           </Lien>
           <p className="v-offre-modalite">{modalite}</p>
-          <MoyensPaiement taille="petit" className="v-offre-moyens" />
+          <div className="v-offre-pays">
+            <label htmlFor="pays-offre">Tu paies depuis</label>
+            <SelectPays id="pays-offre" valeur={pays} changer={changerPays} />
+          </div>
+          <MoyensPaiement pays={pays} taille="petit" className="v-offre-moyens" />
           {outils.length || bonus.length ? (
             <ul className="v-coches">
               {outils.map((o) => (

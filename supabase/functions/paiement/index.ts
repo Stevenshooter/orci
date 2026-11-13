@@ -29,9 +29,11 @@ import {
   emailValide,
   erreur,
   json,
+  paysConnu,
   preflight,
   proprietaire,
   siteUrl,
+  telephoneDuPays,
   telephoneNormalise,
   texte,
   urlFonction,
@@ -99,7 +101,12 @@ async function mode(req: Request): Promise<Response> {
 async function creer(req: Request, corps: Record<string, unknown>): Promise<Response> {
   const slug = texte(corps.offre, 60);
   const nom = texte(corps.nom, 80).replace(/\s+/g, " ");
-  const telephone = telephoneNormalise(texte(corps.telephone, 30));
+  // Le pays choisi par l'acheteur : il fixe l'indicatif du numéro et ouvre la
+  // page NelsiusPay sur ses moyens de paiement.
+  const pays = paysConnu(texte(corps.pays, 2));
+  const telephone = pays
+    ? telephoneDuPays(texte(corps.telephone, 30), pays)
+    : telephoneNormalise(texte(corps.telephone, 30));
   const choix = texte(corps.operateur, 20).toLowerCase();
   // Avec NelsiusPay, l'acheteur choisit son moyen (Mobile Money, carte, PayPal)
   // sur la page sécurisée : l'opérateur n'est exigé qu'en simulation.
@@ -179,6 +186,7 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
       devise: offre.devise,
       description: offre.titre,
       telephone,
+      pays,
       operateur: operateur ?? "",
       nom,
       email,

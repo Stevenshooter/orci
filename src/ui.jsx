@@ -1,6 +1,7 @@
 // Les briques d'interface partagées par la page de vente et l'espace admin.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { moyensDuPays, NOMS_MOYENS, PAYS, paysDe } from "./lib/pays.js";
 
 // ---------------------------------------------------------------------------
 // Icônes : des formes génériques, jamais les logos des marques.
@@ -65,31 +66,40 @@ export function Icone({ nom, taille = 20, className = "", titre }) {
 export const ICONE_OUTIL = { drive: "dossier", meet: "camera", telegram: "avion", whatsapp: "bulle", lien: "lien" };
 
 // ---------------------------------------------------------------------------
-// Les moyens de paiement acceptés sur la page NelsiusPay, avec leurs logos
-// (public/paiements). `fond` : la couleur des logos pleins, pour que leur
-// tuile se confonde avec eux.
+// Les moyens de paiement d'un pays, en logos (public/paiements) ou, faute de
+// logo, en toutes lettres. Les logos pleins (MTN, Orange, Wave) donnent leur
+// couleur à la tuile, pour s'y fondre.
 // ---------------------------------------------------------------------------
 
-export const MOYENS_PAIEMENT = [
-  { id: "mtn", nom: "MTN Mobile Money", fond: "#ffcc00" },
-  { id: "orange", nom: "Orange Money", fond: "#fc6400" },
-  { id: "moov-money", nom: "Moov Money" },
-  { id: "airtel-money", nom: "Airtel Money" },
-  { id: "wave", nom: "Wave", fond: "#1dc8ff" },
-  { id: "visa", nom: "Visa" },
-  { id: "mastercard", nom: "Mastercard" },
-  { id: "paypal", nom: "PayPal" },
-];
+const FONDS = { mtn: "#ffcc00", orange: "#fc6400", wave: "#1dc8ff" };
 
-export function MoyensPaiement({ taille = "normal", className = "" }) {
+export function MoyensPaiement({ pays, taille = "normal", className = "" }) {
+  const p = paysDe(pays);
   return (
-    <ul className={`moyens moyens-${taille} ${className}`} aria-label="Moyens de paiement acceptés">
-      {MOYENS_PAIEMENT.map((m) => (
-        <li key={m.id} title={m.nom} className={m.fond ? "moyen-plein" : undefined} style={m.fond ? { background: m.fond } : undefined}>
-          <img src={`/paiements/${m.id}.webp`} alt={m.nom} loading="lazy" decoding="async" />
-        </li>
-      ))}
+    <ul className={`moyens moyens-${taille} ${className}`} aria-label={`Moyens de paiement ${p.chez}`}>
+      {moyensDuPays(p.code).map((m) =>
+        NOMS_MOYENS[m] ? (
+          <li key={m} title={NOMS_MOYENS[m]} className={FONDS[m] ? "moyen-plein" : undefined} style={FONDS[m] ? { background: FONDS[m] } : undefined}>
+            <img src={`/paiements/${m}.webp`} alt={NOMS_MOYENS[m]} loading="lazy" decoding="async" />
+          </li>
+        ) : (
+          <li key={m} title={m} className="moyen-texte"><span>{m}</span></li>
+        ),
+      )}
     </ul>
+  );
+}
+
+/** La liste des pays, drapeau et indicatif compris. */
+export function SelectPays({ id, valeur, changer, className = "" }) {
+  return (
+    <select id={id} className={className} value={valeur} onChange={(e) => changer(e.target.value)}>
+      {PAYS.map((p) => (
+        <option key={p.code} value={p.code}>
+          {p.drapeau} {p.nom} (+{p.indicatif})
+        </option>
+      ))}
+    </select>
   );
 }
 

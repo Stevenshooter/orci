@@ -12,7 +12,8 @@ import { devinerOperateur, fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
 import { coordonneesConnues, retenirCle, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
-import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, useDonnees, useTitre } from "../ui.jsx";
+import { paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
+import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, SelectPays, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const OPERATEURS = [
@@ -37,6 +38,9 @@ export default function Paiement({ slug }) {
   const [operateur, setOperateur] = useState(connu.operateur || "");
   const [choisi, setChoisi] = useState(Boolean(connu.operateur));
   const [email, setEmail] = useState(connu.email || "");
+  // Le pays choisi sur la page de vente (ou deviné) : il décide des moyens de
+  // paiement montrés et de l'indicatif du numéro.
+  const [pays, setPays] = useState(paysParDefaut);
   const [erreurs, setErreurs] = useState({});
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState(null);
@@ -110,9 +114,9 @@ export default function Paiement({ slug }) {
     const e = {};
     if (nom.trim().length < 2) e.nom = "Écris ton nom complet.";
     const chiffres = tel.replace(/\D/g, "");
-    if (chiffres.length < 8 || chiffres.length > 15) {
+    if (nelsius ? chiffres.length < 6 || chiffres.length > 15 : chiffres.length < 8 || chiffres.length > 15) {
       e.tel = nelsius
-        ? "Écris ton numéro : 9 chiffres au Cameroun (6 90 12 34 56), ou avec l'indicatif hors du Cameroun (+225…)."
+        ? `Écris ton numéro de téléphone ${paysDe(pays).chez}${paysDe(pays).exemple ? `, par exemple ${paysDe(pays).exemple}` : ""}.`
         : "Écris ton numéro avec ses 9 chiffres, par exemple 6 90 12 34 56.";
     }
     // Avec NelsiusPay, le moyen de paiement se choisit sur sa page sécurisée.
@@ -134,9 +138,11 @@ export default function Paiement({ slug }) {
         nom: nom.trim(),
         telephone: tel,
         operateur: nelsius ? "" : operateur,
+        ...(nelsius ? { pays } : {}),
         email: email.trim().toLowerCase(),
         source: sourceVisite(),
       };
+      if (nelsius) retenirPays(pays);
       const r = await fonction("paiement", corps, { session: true });
       retenirCle(r.reference, r.cle);
       retenirCoordonnees({ nom: corps.nom, telephone: tel, operateur, email: corps.email });
@@ -183,29 +189,69 @@ export default function Paiement({ slug }) {
           required
         />
 
-        <Champ
-          etiquette={nelsius ? "Numéro de téléphone (WhatsApp)" : "Numéro Mobile Money"}
-          id="telephone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="6 90 12 34 56"
-          value={tel}
-          onChange={corriger("tel", setTel)}
-          erreur={erreurs.tel}
-          aide={
-            nelsius
-              ? "C'est lui qui te permettra de rejoindre le groupe WhatsApp. Hors du Cameroun, ajoute l'indicatif (+225…)."
-              : "Le numéro qui va payer. C'est aussi lui qui te permettra de rejoindre le groupe WhatsApp."
-          }
-          maxLength={20}
-          required
-        />
+        {nelsius ? (
+          <Champ
+            etiquette="Ton pays"
+            id="pays"
+            enfant={
+              <SelectPays
+                id="pays"
+                valeur={pays}
+                changer={(code) => {
+                  setPays(code);
+                  retenirPays(code);
+                }}
+              />
+            }
+          />
+        ) : null}
+
+        {nelsius ? (
+          <Champ
+            etiquette="Numéro de téléphone (WhatsApp)"
+            id="telephone"
+            erreur={erreurs.tel}
+            aide="C'est lui qui te permettra de rejoindre le groupe WhatsApp."
+            enfant={
+              <div className="champ-tel">
+                <span className="champ-tel-prefixe">+{paysDe(pays).indicatif}</span>
+                <input
+                  id="telephone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  placeholder={paysDe(pays).exemple ?? "Ton numéro"}
+                  aria-invalid={erreurs.tel ? "true" : undefined}
+                  aria-describedby="telephone-aide"
+                  value={tel}
+                  onChange={corriger("tel", setTel)}
+                  maxLength={20}
+                  required
+                />
+              </div>
+            }
+          />
+        ) : (
+          <Champ
+            etiquette="Numéro Mobile Money"
+            id="telephone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="6 90 12 34 56"
+            value={tel}
+            onChange={corriger("tel", setTel)}
+            erreur={erreurs.tel}
+            aide="Le numéro qui va payer. C'est aussi lui qui te permettra de rejoindre le groupe WhatsApp."
+            maxLength={20}
+            required
+          />
+        )}
 
         {nelsius ? (
           <div className="moyens-bloc">
-            <p className="etiquette">Moyens de paiement acceptés</p>
-            <MoyensPaiement />
+            <p className="etiquette">Moyens de paiement {paysDe(pays).chez}</p>
+            <MoyensPaiement pays={pays} />
             <p className="champ-aide">Tu choisis le tien à l'étape suivante, sur la page sécurisée NelsiusPay.</p>
           </div>
         ) : (
