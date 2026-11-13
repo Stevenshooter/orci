@@ -3,8 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { fcfa } from "../lib/format.js";
 import { modifier, televerserImage } from "../lib/supa.js";
+import { videoIntegree } from "../lib/video.js";
 import { Bouton, Champ, Icone, Message, useTitre } from "../ui.jsx";
 import { useAdmin } from "./Admin.jsx";
+
+const MAX_PREUVES = 12;
+const FORMATS_IMAGE = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
 function versFormulaire(offre, formateur) {
   return {
@@ -20,6 +24,7 @@ function versFormulaire(offre, formateur) {
     bonus: Array.isArray(offre.bonus) ? [...offre.bonus] : [],
     duree: offre.infos?.duree ?? "",
     public: offre.infos?.public ?? "",
+    video: offre.infos?.video ?? "",
     publiee: Boolean(offre.publiee),
     slug: offre.slug ?? "",
     nom: formateur?.nom ?? "",
@@ -37,6 +42,7 @@ function verifier(f) {
   if (f.titre.trim().length < 3 || f.titre.trim().length > 120) e.titre = "Entre 3 et 120 caractères.";
   if (f.sous_titre.length > 240) e.sous_titre = "240 caractères au plus.";
   if (f.description.length > 4000) e.description = "4 000 caractères au plus.";
+  if (f.video.trim() && !videoIntegree(f.video)) e.video = "Colle un lien YouTube, ou un lien direct (https) vers un fichier .mp4.";
   const prix = entier(f.prix);
   if (!(prix >= 100 && prix <= 10_000_000)) e.prix = "Un montant entier entre 100 et 10 000 000 FCFA.";
   if (f.prix_barre.trim()) {
@@ -91,7 +97,12 @@ export default function Offre() {
         duree_jours: f.duree_jours.trim() ? entier(f.duree_jours) : null,
         programme: f.programme.filter((p) => p.titre.trim()).map((p) => ({ titre: p.titre.trim(), texte: p.texte.trim() })),
         bonus: f.bonus.map((b) => b.trim()).filter(Boolean),
-        infos: { ...(offre.infos || {}), duree: f.duree.trim() || undefined, public: f.public.trim() || undefined },
+        infos: {
+          ...(offre.infos || {}),
+          duree: f.duree.trim() || undefined,
+          public: f.public.trim() || undefined,
+          video: f.video.trim() || undefined,
+        },
         publiee: f.publiee,
         slug: f.slug,
       });
@@ -138,6 +149,56 @@ export default function Offre() {
     }
   }
 
+  // Les preuves s'enregistrent aussitôt, comme l'image : elles ne passent pas
+  // par le bouton « Enregistrer ».
+  const preuves = Array.isArray(offre.infos?.preuves) ? offre.infos.preuves : [];
+  const [preuve, setPreuve] = useState({ envoi: false, erreur: null });
+
+  async function enregistrerPreuves(liste) {
+    await modifier("offres", `id=eq.${offre.id}`, { infos: { ...(offre.infos || {}), preuves: liste } });
+    await recharger({ silencieux: true });
+  }
+
+  async function ajouterPreuves(e) {
+    const fichiers = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!fichiers.length) return;
+    const place = MAX_PREUVES - preuves.length;
+    if (place <= 0) {
+      setPreuve({ envoi: false, erreur: `${MAX_PREUVES} captures au plus : retires-en une d'abord.` });
+      return;
+    }
+    const refus = fichiers.find((x) => !FORMATS_IMAGE[x.type] || x.size > 5 * 1024 * 1024);
+    if (refus) {
+      setPreuve({ envoi: false, erreur: `« ${refus.name} » : une image JPEG, PNG ou WebP de 5 Mo au plus.` });
+      return;
+    }
+    setPreuve({ envoi: true, erreur: null });
+    try {
+      const urls = [];
+      for (const [i, fichier] of fichiers.slice(0, place).entries()) {
+        urls.push(await televerserImage(`offres/${offre.id}/preuves/${Date.now()}-${i}.${FORMATS_IMAGE[fichier.type]}`, fichier));
+      }
+      await enregistrerPreuves([...preuves, ...urls]);
+      setPreuve({
+        envoi: false,
+        erreur: fichiers.length > place ? `Seules ${place} capture(s) ajoutée(s) : ${MAX_PREUVES} au plus.` : null,
+      });
+    } catch (err) {
+      setPreuve({ envoi: false, erreur: err.message });
+    }
+  }
+
+  async function retirerPreuve(src) {
+    setPreuve({ envoi: true, erreur: null });
+    try {
+      await enregistrerPreuves(preuves.filter((x) => x !== src));
+      setPreuve({ envoi: false, erreur: null });
+    } catch (err) {
+      setPreuve({ envoi: false, erreur: err.message });
+    }
+  }
+
   const setProgramme = (i, champ, v) => setF((x) => ({ ...x, programme: x.programme.map((p, j) => (j === i ? { ...p, [champ]: v } : p)) }));
   const deplacer = (i, d) =>
     setF((x) => {
@@ -174,7 +235,26 @@ export default function Offre() {
       <section className="carte pile">
         <h2 className="titre-carte">Présentation</h2>
         <Champ etiquette="Titre" id="titre" value={f.titre} onChange={maj("titre")} erreur={erreurs.titre} maxLength={120} />
-        <Champ etiquette="Accroche" id="sous_titre" value={f.sous_titre} onChange={maj("sous_titre")} erreur={erreurs.sous_titre} maxLength={240} aide="Une phrase sous le titre : la promesse de la formation." />
+        <Champ
+          etiquette="Accroche"
+          id="sous_titre"
+          value={f.sous_titre}
+          onChange={maj("sous_titre")}
+          erreur={erreurs.sous_titre}
+          maxLength={240}
+          aide="La grande phrase en haut de la page : la promesse. Entoure un mot d'astérisques pour le mettre en doré, par exemple : vidéos *professionnelles*. Sinon, c'est le mot le plus long."
+        />
+        <Champ
+          etiquette="Vidéo de présentation (facultatif)"
+          id="video"
+          type="url"
+          inputMode="url"
+          placeholder="https://youtu.be/…"
+          value={f.video}
+          onChange={maj("video")}
+          erreur={erreurs.video}
+          aide="Un lien YouTube (même non répertorié) ou un lien direct vers un fichier .mp4. Elle s'affiche sous l'accroche, à la place de l'image."
+        />
         <Champ
           etiquette="Description détaillée (facultatif)"
           id="description"
@@ -197,6 +277,32 @@ export default function Offre() {
             {image.erreur ? <p className="champ-aide champ-aide-erreur">{image.erreur}</p> : null}
           </div>
         </div>
+      </section>
+
+      <section className="carte pile">
+        <h2 className="titre-carte">Ils nous ont fait confiance</h2>
+        <p className="texte-doux petit">
+          Des captures de résultats ou de messages d'élèves, avec leur accord. Elles défilent sur la page de vente, juste
+          après le bouton. {MAX_PREUVES} au plus ; sans capture, la partie ne s'affiche pas.
+        </p>
+        {preuves.length ? (
+          <ul className="preuves-admin">
+            {preuves.map((src, i) => (
+              <li key={src}>
+                <img src={src} alt={`Capture ${i + 1}`} loading="lazy" />
+                <button type="button" className="icone-bouton" aria-label={`Retirer la capture ${i + 1}`} onClick={() => retirerPreuve(src)} disabled={preuve.envoi}>
+                  <Icone nom="poubelle" taille={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <label className={`bouton bouton-discret ${preuve.envoi ? "en-charge" : ""}`}>
+          {preuve.envoi ? <span className="roue" aria-hidden="true" /> : <Icone nom="plus" taille={18} />}
+          <span>Ajouter des captures</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={ajouterPreuves} hidden disabled={preuve.envoi || preuves.length >= MAX_PREUVES} />
+        </label>
+        {preuve.erreur ? <p className="champ-aide champ-aide-erreur">{preuve.erreur}</p> : null}
       </section>
 
       <section className="carte pile">

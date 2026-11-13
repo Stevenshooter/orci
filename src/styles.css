@@ -1205,6 +1205,680 @@ details.avance[open] > summary {
   }
 }
 
+/* ------------------------------------------- Page de vente, deuxième version
+   Fond noir violacé, trame de points, lueurs or et violet ; un seul geste
+   doré : le bouton-pilule à contour lumineux. */
+
+.vente.v2 {
+  position: relative;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 120px;
+  overflow: clip;
+  isolation: isolate;
+}
+
+.v-contenu {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.v-fond {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 440px at 50% -80px, rgb(226 182 107 / 0.2), transparent 72%),
+    radial-gradient(45% 420px at 92% 60px, rgb(91 69 224 / 0.3), transparent 72%),
+    radial-gradient(40% 380px at 4% 220px, rgb(91 69 224 / 0.18), transparent 72%);
+}
+
+.v-fond::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 0.075) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0, rgb(0 0 0 / 0.5) 700px, rgb(0 0 0 / 0.22) 100%);
+  mask-image: linear-gradient(180deg, #000 0, rgb(0 0 0 / 0.5) 700px, rgb(0 0 0 / 0.22) 100%);
+}
+
+.vente.v2 .vente-entete {
+  padding: 18px 0 0;
+}
+
+.v-deja {
+  margin-top: 12px;
+}
+
+/* --- Héros */
+
+.v-heros {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 40px 0 56px;
+  text-align: center;
+}
+
+.v-surtitre {
+  max-width: 40ch;
+  margin: 0;
+  font: 600 0.76rem/1.4 var(--texte);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--or-clair);
+}
+
+.v-surtitre span {
+  color: var(--encre-3);
+}
+
+.v-titre-heros {
+  max-width: 17ch;
+  font: 800 clamp(2.05rem, 8.4vw, 3.75rem) / 1.06 var(--titre);
+  letter-spacing: -0.03em;
+}
+
+/* Le mot doré souligné. */
+.v-accent {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.04em;
+  background: linear-gradient(180deg, #f7e2b0 0%, #e2b66b 55%, #c4964a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.v-accent::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.02em;
+  height: max(2px, 0.075em);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(226 182 107 / 0), #e2b66b 18%, #f3d49a 50%, #e2b66b 82%, rgb(226 182 107 / 0));
+  box-shadow: 0 0 14px rgb(226 182 107 / 0.55);
+}
+
+.v-media {
+  width: 100%;
+  max-width: 760px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #000;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow:
+    0 0 0 1px rgb(123 102 240 / 0.16),
+    0 30px 70px -30px rgb(0 0 0 / 0.95),
+    0 0 70px -24px rgb(91 69 224 / 0.5);
+}
+
+.v-media img,
+.v-media video,
+.v-media iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+
+.v-media-video {
+  aspect-ratio: 16 / 9;
+}
+
+.v-media-video iframe,
+.v-media-video video {
+  height: 100%;
+}
+
+/* --- Le bouton-pilule lumineux */
+
+.v-cta {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 58px;
+  padding: 0 28px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(180deg, #1b1624, #0d0b12) padding-box,
+    linear-gradient(115deg, #f7e2b0, #e2b66b 28%, #8f6c33 55%, #7b66f0 85%, #b3a6ff) border-box;
+  color: var(--or-clair);
+  font: 700 1.03rem/1.2 var(--texte);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow:
+    0 12px 32px -14px rgb(226 182 107 / 0.55),
+    0 0 36px -10px rgb(123 102 240 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Un reflet qui traverse le bouton de temps en temps. */
+.v-cta::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.14), transparent);
+  transform: skewX(-18deg);
+  animation: v-reflet 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.v-cta:hover {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 38px -14px rgb(226 182 107 / 0.7),
+    0 0 46px -8px rgb(123 102 240 / 0.6),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.v-cta:active {
+  transform: translateY(1px);
+}
+
+.v-cta:focus-visible {
+  outline: 2px solid var(--or-clair);
+  outline-offset: 3px;
+}
+
+.v-cta .icone {
+  transition: transform 0.2s ease;
+}
+
+.v-cta:hover .icone {
+  transform: translateX(3px);
+}
+
+.v-cta-plein {
+  max-width: none;
+}
+
+.v-cta-compact {
+  width: auto;
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: 0.98rem;
+}
+
+.v-cta-compact::before {
+  display: none;
+}
+
+@keyframes v-reflet {
+  0%,
+  55% {
+    left: -40%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+.v-rassure {
+  margin: -6px 0 0;
+  font-size: 0.82rem;
+  color: var(--encre-3);
+}
+
+/* --- Sections */
+
+.v-section {
+  padding: 56px 0;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.v-titre {
+  max-width: 22ch;
+  margin: 0 auto 26px;
+  font: 700 clamp(1.55rem, 6vw, 2.3rem) / 1.15 var(--titre);
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+/* --- Preuves qui défilent */
+
+.v-defile {
+  overflow: hidden;
+  margin: 0 -16px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.v-defile-piste {
+  display: flex;
+  width: max-content;
+  padding: 4px 0;
+  animation: v-defile 45s linear infinite;
+}
+
+.v-defile:hover .v-defile-piste {
+  animation-play-state: paused;
+}
+
+.v-defile img {
+  height: 300px;
+  width: auto;
+  max-width: 72vw;
+  margin-right: 14px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: var(--surface);
+  box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.9);
+}
+
+@keyframes v-defile {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- La carte de l'offre */
+
+.v-offre {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 26px 22px 22px;
+  border-radius: 22px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, #16131f, #0e0c14) padding-box,
+    linear-gradient(160deg, rgb(226 182 107 / 0.55), rgb(255 255 255 / 0.06) 35%, rgb(255 255 255 / 0.05) 65%, rgb(123 102 240 / 0.55)) border-box;
+  box-shadow:
+    0 40px 80px -40px rgb(0 0 0 / 0.95),
+    0 0 70px -30px rgb(91 69 224 / 0.5);
+}
+
+.v-offre-titre {
+  font: 700 1.3rem/1.25 var(--titre);
+}
+
+.v-offre-public {
+  margin: 6px 0 0;
+  color: var(--encre-2);
+  font-size: 0.92rem;
+}
+
+.v-prix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 8px;
+  margin: 18px 0 16px;
+}
+
+.v-prix-montant {
+  font: 800 clamp(2.6rem, 11vw, 3.2rem) / 1 var(--titre);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-prix-devise {
+  margin-top: 0.4em;
+  font: 700 0.9rem/1 var(--texte);
+  color: var(--or);
+}
+
+.v-prix-ancien {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  margin-left: 6px;
+  color: var(--encre-3);
+  font-size: 0.95rem;
+}
+
+.v-remise {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--or-clair), var(--or));
+  color: var(--sur-or);
+  font: 700 0.78rem/1 var(--texte);
+}
+
+.v-puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.v-puces li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.03);
+  color: var(--encre-2);
+  font-size: 0.82rem;
+}
+
+.v-puces .icone {
+  color: var(--or);
+}
+
+.v-offre-modalite {
+  margin: 10px 0 0;
+  text-align: center;
+  color: var(--encre-3);
+  font-size: 0.82rem;
+}
+
+.v-coches {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 20px 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.07);
+  list-style: none;
+}
+
+.v-coches li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--encre-2);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.v-coches .icone {
+  flex: none;
+  margin-top: 2px;
+  color: var(--or);
+}
+
+.v-coche-bonus strong {
+  color: var(--or-clair);
+  font-weight: 600;
+}
+
+/* --- Cartes à tuile */
+
+.v-cartes {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .v-cartes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 980px) {
+  .v-cartes-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.v-carte {
+  position: relative;
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.012));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 24px 48px -30px rgb(0 0 0 / 0.95);
+  transition: border-color 0.2s ease;
+}
+
+.v-carte:hover {
+  border-color: rgb(226 182 107 / 0.28);
+}
+
+.v-tuile {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  border: 1px solid rgb(226 182 107 / 0.38);
+  background: rgb(226 182 107 / 0.08);
+  color: var(--or);
+  font: 700 0.95rem/1 var(--titre);
+  box-shadow: 0 0 22px -8px rgb(226 182 107 / 0.55);
+}
+
+.v-tuile-violet {
+  border-color: rgb(123 102 240 / 0.5);
+  background: rgb(91 69 224 / 0.14);
+  color: var(--lien);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 22px -8px rgb(123 102 240 / 0.7);
+}
+
+.v-carte-titre {
+  margin: 0 0 8px;
+  font: 700 1.08rem/1.3 var(--titre);
+}
+
+.v-carte-texte {
+  margin: 0;
+  color: var(--encre-2);
+  font-size: 0.93rem;
+  line-height: 1.6;
+}
+
+.v-detail {
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--encre-2);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+/* --- Questions fréquentes */
+
+.v-faq.v-carte {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+}
+
+.v-faq-item + .v-faq-item {
+  border-top: 1px solid rgb(255 255 255 / 0.07);
+}
+
+.v-faq h3 {
+  font: inherit;
+  letter-spacing: normal;
+  text-wrap: pretty;
+}
+
+.v-faq-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 20px;
+  border: 0;
+  background: none;
+  color: var(--encre);
+  font: 600 0.98rem/1.4 var(--texte);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v-faq-q:focus-visible {
+  outline: 2px solid var(--violet-clair);
+  outline-offset: -2px;
+  border-radius: 14px;
+}
+
+.v-faq-chevron {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgb(226 182 107 / 0.38);
+  background: rgb(226 182 107 / 0.08);
+  color: var(--or);
+  transition: transform 0.25s ease;
+}
+
+.v-faq-item.ouvert .v-faq-chevron {
+  transform: rotate(180deg);
+}
+
+.v-faq-r {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+
+.v-faq-item.ouvert .v-faq-r {
+  grid-template-rows: 1fr;
+}
+
+.v-faq-r > div {
+  overflow: hidden;
+}
+
+.v-faq-r p {
+  margin: 0;
+  padding: 0 20px 18px;
+  color: var(--encre-2);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.v-faq-r a {
+  color: var(--lien);
+}
+
+/* --- Appel final et pied */
+
+.v-final {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 72px 0 64px;
+  text-align: center;
+}
+
+.v-final::before {
+  content: "";
+  position: absolute;
+  top: 8%;
+  left: 0;
+  right: 0;
+  height: 80%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(45% 55% at 50% 45%, rgb(226 182 107 / 0.17), transparent 72%),
+    radial-gradient(35% 50% at 72% 60%, rgb(91 69 224 / 0.24), transparent 72%);
+}
+
+.v-titre-final {
+  max-width: 18ch;
+  font: 800 clamp(1.8rem, 7vw, 2.8rem) / 1.12 var(--titre);
+  letter-spacing: -0.025em;
+}
+
+.v-pied {
+  display: grid;
+  gap: 8px;
+  padding: 28px 0 8px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+  text-align: center;
+  color: var(--encre-2);
+  font-size: 0.9rem;
+}
+
+.v-pied p {
+  margin: 0;
+}
+
+.v-pied a {
+  color: var(--lien);
+}
+
+.v-pied-orci {
+  color: var(--encre-3);
+  font-size: 0.78rem;
+}
+
+.vente.v2 .barre-achat {
+  background: rgb(14 12 20 / 0.92);
+  border-top-color: rgb(255 255 255 / 0.08);
+}
+
+/* --- Apparition au défilement (seulement si le navigateur sait l'observer) */
+
+.v-anime .v-apparait {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(6px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.7s ease;
+}
+
+.v-anime .v-apparait.v-vu {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-cta::before {
+    display: none;
+  }
+  .v-defile {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .v-defile-piste {
+    animation: none;
+  }
+  .v-defile img {
+    scroll-snap-align: center;
+  }
+  .v-defile img[aria-hidden="true"] {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------- Paiement */
 
 .recap {
@@ -2348,6 +3022,38 @@ details.avance[open] > summary {
 }
 
 /* --- Offre */
+
+.preuves-admin {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preuves-admin li {
+  position: relative;
+}
+
+.preuves-admin img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--rayon-m);
+  border: 1px solid var(--ligne-2);
+  background: var(--releve);
+}
+
+.preuves-admin .icone-bouton {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  background: rgb(9 8 14 / 0.85);
+}
 
 .offre .titre-carte {
   margin-bottom: 2px;
