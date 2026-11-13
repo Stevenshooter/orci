@@ -100,14 +100,18 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
   const slug = texte(corps.offre, 60);
   const nom = texte(corps.nom, 80).replace(/\s+/g, " ");
   const telephone = telephoneNormalise(texte(corps.telephone, 30));
-  const operateur = texte(corps.operateur, 20).toLowerCase();
+  const choix = texte(corps.operateur, 20).toLowerCase();
+  // Avec NelsiusPay, l'acheteur choisit son moyen (Mobile Money, carte, PayPal)
+  // sur la page sécurisée : l'opérateur n'est exigé qu'en simulation.
+  const operateur = OPERATEURS.has(choix) ? choix : null;
   const emailBrut = texte(corps.email, 254);
   const email = emailBrut ? emailValide(emailBrut) : null;
   const source = texte(corps.source, 60).toLowerCase().replace(/[^a-z0-9_.-]/g, "") || null;
+  const mode = await modePaiement();
 
   if (nom.length < 2) return erreur("Écris ton nom complet.");
-  if (!telephone) return erreur("Ce numéro ne semble pas valide. Écris-le avec ses 9 chiffres.");
-  if (!OPERATEURS.has(operateur)) return erreur("Choisis ton opérateur.");
+  if (!telephone) return erreur("Ce numéro ne semble pas valide : 9 chiffres au Cameroun, ou avec l'indicatif.");
+  if (mode === "simulation" && !operateur) return erreur("Choisis ton opérateur.");
   if (emailBrut && !email) return erreur("Cette adresse e-mail ne semble pas valide.");
 
   const { data: offre } = await admin()
@@ -117,7 +121,6 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
     .maybeSingle();
   if (!offre || !offre.publiee) return erreur("Cette offre n'existe pas ou n'est plus en vente.", 404);
 
-  const mode = await modePaiement();
   const test = paiementDeTest(mode);
   if (test) {
     const moi = await proprietaire(req);
@@ -176,7 +179,7 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
       devise: offre.devise,
       description: offre.titre,
       telephone,
-      operateur,
+      operateur: operateur ?? "",
       nom,
       email,
       retourUrl: `${site}/paiement/${reference}`,

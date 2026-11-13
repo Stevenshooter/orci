@@ -10,7 +10,7 @@ import { Lien } from "../lib/routeur.jsx";
 import { rpc } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { accesConnu, idVisiteur, sourceVisite } from "../lib/visiteur.js";
-import { Chargement, Icone, ICONE_OUTIL, Message, useDonnees, useTitre } from "../ui.jsx";
+import { Chargement, Icone, ICONE_OUTIL, Message, MoyensPaiement, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const PROMESSE = {
@@ -210,7 +210,7 @@ export default function Vente({ slug }) {
   const questions = [
     {
       q: "Comment je paie ?",
-      r: "Par MTN MoMo ou Orange Money, depuis ton téléphone : tu valides la demande avec ton code secret Mobile Money. Ton code ne s'écrit jamais sur cette page.",
+      r: "Sur la page de paiement sécurisée NelsiusPay, tu choisis : Mobile Money (MTN et Orange au Cameroun, et aussi Moov, Airtel ou Wave dans les autres pays couverts), carte Visa ou Mastercard, ou PayPal. Tes codes ne s'écrivent jamais sur cette page.",
     },
     {
       q: "Quand est-ce que j'ai accès à la formation ?",
@@ -288,7 +288,8 @@ export default function Vente({ slug }) {
           <span>Je rejoins la formation</span>
           <Icone nom="fleche" taille={18} />
         </Lien>
-        <p className="v-rassure">Accès immédiat · MTN MoMo ou Orange Money</p>
+        <p className="v-rassure">Paiement sécurisé · Accès immédiat</p>
+        <MoyensPaiement />
       </section>
 
       {preuves.length ? (
@@ -314,6 +315,7 @@ export default function Vente({ slug }) {
             <Icone nom="fleche" taille={18} />
           </Lien>
           <p className="v-offre-modalite">{modalite}</p>
+          <MoyensPaiement taille="petit" className="v-offre-moyens" />
           {outils.length || bonus.length ? (
             <ul className="v-coches">
               {outils.map((o) => (

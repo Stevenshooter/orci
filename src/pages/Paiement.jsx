@@ -12,7 +12,7 @@ import { devinerOperateur, fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
 import { coordonneesConnues, retenirCle, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
-import { Bouton, Champ, Chargement, Icone, LienBouton, Message, useDonnees, useTitre } from "../ui.jsx";
+import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const OPERATEURS = [
@@ -110,8 +110,13 @@ export default function Paiement({ slug }) {
     const e = {};
     if (nom.trim().length < 2) e.nom = "Écris ton nom complet.";
     const chiffres = tel.replace(/\D/g, "");
-    if (chiffres.length < 8 || chiffres.length > 15) e.tel = "Écris ton numéro avec ses 9 chiffres, par exemple 6 90 12 34 56.";
-    if (!operateur) e.operateur = "Choisis ton opérateur.";
+    if (chiffres.length < 8 || chiffres.length > 15) {
+      e.tel = nelsius
+        ? "Écris ton numéro : 9 chiffres au Cameroun (6 90 12 34 56), ou avec l'indicatif hors du Cameroun (+225…)."
+        : "Écris ton numéro avec ses 9 chiffres, par exemple 6 90 12 34 56.";
+    }
+    // Avec NelsiusPay, le moyen de paiement se choisit sur sa page sécurisée.
+    if (!nelsius && !operateur) e.operateur = "Choisis ton opérateur.";
     if (email.trim() && !emailValide(email.trim())) e.email = "Cette adresse ne semble pas valide.";
     setErreurs(e);
     return Object.keys(e).length === 0;
@@ -128,7 +133,7 @@ export default function Paiement({ slug }) {
         offre: offre.slug,
         nom: nom.trim(),
         telephone: tel,
-        operateur,
+        operateur: nelsius ? "" : operateur,
         email: email.trim().toLowerCase(),
         source: sourceVisite(),
       };
@@ -179,7 +184,7 @@ export default function Paiement({ slug }) {
         />
 
         <Champ
-          etiquette="Numéro Mobile Money"
+          etiquette={nelsius ? "Numéro de téléphone (WhatsApp)" : "Numéro Mobile Money"}
           id="telephone"
           type="tel"
           inputMode="tel"
@@ -188,11 +193,22 @@ export default function Paiement({ slug }) {
           value={tel}
           onChange={corriger("tel", setTel)}
           erreur={erreurs.tel}
-          aide="Le numéro qui va payer. C'est aussi lui qui te permettra de rejoindre le groupe WhatsApp."
+          aide={
+            nelsius
+              ? "C'est lui qui te permettra de rejoindre le groupe WhatsApp. Hors du Cameroun, ajoute l'indicatif (+225…)."
+              : "Le numéro qui va payer. C'est aussi lui qui te permettra de rejoindre le groupe WhatsApp."
+          }
           maxLength={20}
           required
         />
 
+        {nelsius ? (
+          <div className="moyens-bloc">
+            <p className="etiquette">Moyens de paiement acceptés</p>
+            <MoyensPaiement />
+            <p className="champ-aide">Tu choisis le tien à l'étape suivante, sur la page sécurisée NelsiusPay.</p>
+          </div>
+        ) : (
         <fieldset className={`choix ${erreurs.operateur ? "champ-erreur" : ""}`}>
           <legend>Opérateur</legend>
           <div className="choix-options">
@@ -216,6 +232,7 @@ export default function Paiement({ slug }) {
           </div>
           {erreurs.operateur ? <p className="champ-aide champ-aide-erreur">{erreurs.operateur}</p> : null}
         </fieldset>
+        )}
 
         <Champ
           etiquette={avecGoogle ? "Adresse Gmail (conseillé)" : "Adresse e-mail (facultatif)"}
@@ -238,7 +255,7 @@ export default function Paiement({ slug }) {
         </Bouton>
         <p className="mention">
           {nelsius
-            ? "Tu passes ensuite sur la page sécurisée NelsiusPay : la demande arrive sur ton téléphone et tu la valides avec ton code secret Mobile Money. Ton code ne s'écrit jamais sur Orci."
+            ? "Tu passes ensuite sur la page sécurisée NelsiusPay pour payer par Mobile Money, carte bancaire ou PayPal. Tes codes ne s'écrivent jamais sur Orci."
             : "Une demande de paiement arrive sur ton téléphone : tu la valides avec ton code secret Mobile Money. Ton code ne s'écrit jamais sur cette page."}
         </p>
       </form>
