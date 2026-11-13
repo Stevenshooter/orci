@@ -299,7 +299,6 @@ export default function Vente({ slug }) {
           <Icone nom="fleche" taille={18} />
         </Lien>
         <p className="v-rassure">Paiement sécurisé · Accès immédiat</p>
-        <MoyensPaiement pays={pays} />
       </section>
 
       {preuves.length ? (
