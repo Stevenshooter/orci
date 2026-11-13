@@ -169,11 +169,23 @@ export default function Attente({ reference }) {
       <div className="attente-icone attente-cours" aria-hidden="true">
         <span className="roue roue-grande" />
       </div>
-      <h1>Valide le paiement sur ton téléphone</h1>
-      <p className="attente-texte">
-        Une demande de {fcfa(etat.montant)} arrive sur ton téléphone{etat.operateur === "orange" ? " (Orange Money)" : etat.operateur === "mtn" ? " (MTN MoMo)" : ""}.
-        Entre ton code secret pour la valider. Cette page s'ouvrira toute seule ensuite.
-      </p>
+      {nelsius ? (
+        <>
+          <h1>Paiement en cours de confirmation</h1>
+          <p className="attente-texte">
+            Si tu paies par Mobile Money, valide la demande de {fcfa(etat.montant)} sur ton téléphone avec ton code secret.
+            Cette page s'ouvrira toute seule dès que NelsiusPay confirme le paiement.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1>Valide le paiement sur ton téléphone</h1>
+          <p className="attente-texte">
+            Une demande de {fcfa(etat.montant)} arrive sur ton téléphone{etat.operateur === "orange" ? " (Orange Money)" : etat.operateur === "mtn" ? " (MTN MoMo)" : ""}.
+            Entre ton code secret pour la valider. Cette page s'ouvrira toute seule ensuite.
+          </p>
+        </>
+      )}
       <p className="attente-reference">Référence : {reference}</p>
 
       {test && proprietaire ? (

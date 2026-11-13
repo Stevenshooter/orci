@@ -65,6 +65,35 @@ export function Icone({ nom, taille = 20, className = "", titre }) {
 export const ICONE_OUTIL = { drive: "dossier", meet: "camera", telegram: "avion", whatsapp: "bulle", lien: "lien" };
 
 // ---------------------------------------------------------------------------
+// Les moyens de paiement acceptés sur la page NelsiusPay, avec leurs logos
+// (public/paiements). `fond` : la couleur des logos pleins, pour que leur
+// tuile se confonde avec eux.
+// ---------------------------------------------------------------------------
+
+export const MOYENS_PAIEMENT = [
+  { id: "mtn", nom: "MTN Mobile Money", fond: "#ffcc00" },
+  { id: "orange", nom: "Orange Money", fond: "#fc6400" },
+  { id: "moov-money", nom: "Moov Money" },
+  { id: "airtel-money", nom: "Airtel Money" },
+  { id: "wave", nom: "Wave", fond: "#1dc8ff" },
+  { id: "visa", nom: "Visa" },
+  { id: "mastercard", nom: "Mastercard" },
+  { id: "paypal", nom: "PayPal" },
+];
+
+export function MoyensPaiement({ taille = "normal", className = "" }) {
+  return (
+    <ul className={`moyens moyens-${taille} ${className}`} aria-label="Moyens de paiement acceptés">
+      {MOYENS_PAIEMENT.map((m) => (
+        <li key={m.id} title={m.nom} className={m.fond ? "moyen-plein" : undefined} style={m.fond ? { background: m.fond } : undefined}>
+          <img src={`/paiements/${m.id}.webp`} alt={m.nom} loading="lazy" decoding="async" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 export function Bouton({ variante = "or", charge = false, icone, children, className = "", disabled, ...reste }) {
   return (
