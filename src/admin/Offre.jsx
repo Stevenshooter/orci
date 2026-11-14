@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fcfa } from "../lib/format.js";
+import { imageLisible, typeImage } from "../lib/image.js";
 import { cheminStockage, modifier, supprimerFichier, televerser, televerserImage } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { Bouton, Champ, Icone, Message, useTitre } from "../ui.jsx";
@@ -236,15 +237,20 @@ export default function Offre() {
       setPreuve({ envoi: false, erreur: `${MAX_PREUVES} témoignages au plus : retires-en un d'abord.` });
       return;
     }
-    const refus = fichiers.find((x) => !FORMATS_IMAGE[x.type] || x.size > 5 * 1024 * 1024);
+    const refus = fichiers.find((x) => !FORMATS_IMAGE[typeImage(x)] && typeImage(x) !== "image/avif");
     if (refus) {
-      setPreuve({ envoi: false, erreur: `« ${refus.name} » : une image JPEG, PNG ou WebP de 5 Mo au plus.` });
+      setPreuve({ envoi: false, erreur: `« ${refus.name} » : une image JPEG, PNG, WebP ou AVIF.` });
       return;
     }
     setPreuve({ envoi: true, erreur: null });
     try {
+      // Les AVIF deviennent des WebP : tous les téléphones savent les afficher.
+      const prets = [];
+      for (const x of fichiers.slice(0, place)) prets.push(await imageLisible(x));
+      const lourd = prets.find((x) => x.size > 5 * 1024 * 1024);
+      if (lourd) throw new Error(`« ${lourd.name} » dépasse 5 Mo. Réduis l'image avant de l'envoyer.`);
       const urls = [];
-      for (const [i, fichier] of fichiers.slice(0, place).entries()) {
+      for (const [i, fichier] of prets.entries()) {
         urls.push(await televerserImage(`offres/${offre.id}/preuves/${Date.now()}-${i}.${FORMATS_IMAGE[fichier.type]}`, fichier));
       }
       await enregistrerPreuves([...preuves, ...urls]);
@@ -384,8 +390,8 @@ export default function Offre() {
         <h2 className="titre-carte">Témoignages clients</h2>
         <p className="texte-doux petit">
           Des captures de messages ou de résultats de tes élèves, avec leur accord. Elles défilent toutes seules sur ta
-          page de vente, sous « Ils nous ont fait confiance », juste après le bouton. {MAX_PREUVES} au plus ; sans
-          témoignage, cette partie ne s'affiche pas.
+          page de vente, sous « Ils nous ont fait confiance », juste après le bouton. JPEG, PNG, WebP ou AVIF (converti
+          automatiquement pour tous les téléphones), {MAX_PREUVES} au plus ; sans témoignage, cette partie ne s'affiche pas.
         </p>
         {preuves.length ? (
           <ul className="preuves-admin">
@@ -402,7 +408,14 @@ export default function Offre() {
         <label className={`bouton bouton-discret ${preuve.envoi ? "en-charge" : ""}`}>
           {preuve.envoi ? <span className="roue" aria-hidden="true" /> : <Icone nom="plus" taille={18} />}
           <span>Ajouter des témoignages</span>
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={ajouterPreuves} hidden disabled={preuve.envoi || preuves.length >= MAX_PREUVES} />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif,.avif"
+            multiple
+            onChange={ajouterPreuves}
+            hidden
+            disabled={preuve.envoi || preuves.length >= MAX_PREUVES}
+          />
         </label>
         {preuve.erreur ? <p className="champ-aide champ-aide-erreur">{preuve.erreur}</p> : null}
       </section>
