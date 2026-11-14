@@ -243,14 +243,71 @@ export async function fonction(nom, corps = {}, { admin = false, session: jointe
 // Images
 // ---------------------------------------------------------------------------
 
-export async function televerserImage(chemin, fichier) {
+/**
+ * Envoyer un fichier dans un seau public du stockage, en suivant l'avancement
+ * (XMLHttpRequest : fetch ne dit pas où en est un envoi). Rend son adresse
+ * publique. Les chemins sont uniques : le fichier peut rester un an en cache.
+ */
+export function televerser(seau, chemin, fichier, { progression } = {}) {
+  return jetonValide().then(
+    (t) =>
+      new Promise((resolve, reject) => {
+        if (!t) {
+          reject(new ErreurApi("Ta session a expiré. Reconnecte-toi.", 401));
+          return;
+        }
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${SUPABASE_URL}/storage/v1/object/${seau}/${chemin}`);
+        xhr.setRequestHeader("apikey", SUPABASE_CLE);
+        xhr.setRequestHeader("Authorization", `Bearer ${t}`);
+        xhr.setRequestHeader("Content-Type", fichier.type || "application/octet-stream");
+        xhr.setRequestHeader("cache-control", "max-age=31536000");
+        if (progression) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) progression(e.loaded / e.total);
+          };
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(`${SUPABASE_URL}/storage/v1/object/public/${seau}/${chemin}`);
+            return;
+          }
+          let m = "";
+          try {
+            const j = JSON.parse(xhr.responseText);
+            m = String(j.message || j.error || "");
+          } catch {
+            // réponse illisible
+          }
+          if (xhr.status === 413 || /maximum allowed size|too large/i.test(m)) m = "Le fichier dépasse la taille permise.";
+          else if (/mime type|invalid_mime_type/i.test(m)) m = "Ce format de fichier n'est pas accepté.";
+          else if (xhr.status === 401 || xhr.status === 403) m = "Envoi refusé : reconnecte-toi, puis réessaie.";
+          reject(new ErreurApi(m || `Envoi refusé (${xhr.status}).`, xhr.status));
+        };
+        xhr.onerror = () => reject(new ErreurApi("Connexion coupée pendant l'envoi. Vérifie ton réseau, puis réessaie.", 0, "reseau"));
+        xhr.send(fichier);
+      }),
+  );
+}
+
+export function televerserImage(chemin, fichier) {
+  return televerser("medias", chemin, fichier);
+}
+
+/** Le chemin d'un fichier de ce seau d'après son adresse publique, sinon null. */
+export function cheminStockage(url, seau) {
+  const debut = `${SUPABASE_URL}/storage/v1/object/public/${seau}/`;
+  return typeof url === "string" && url.startsWith(debut) ? url.slice(debut.length) : null;
+}
+
+/** Retirer un fichier du stockage. Un échec ne doit rien bloquer : il reste un fichier en trop. */
+export async function supprimerFichier(seau, chemin) {
   const t = await jetonValide();
-  await appeler(`${SUPABASE_URL}/storage/v1/object/medias/${chemin}`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_CLE, Authorization: `Bearer ${t}`, "Content-Type": fichier.type, "cache-control": "31536000" },
-    body: fichier,
-  });
-  return `${SUPABASE_URL}/storage/v1/object/public/medias/${chemin}`;
+  if (!t) return;
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${seau}/${chemin}`, {
+    method: "DELETE",
+    headers: { apikey: SUPABASE_CLE, Authorization: `Bearer ${t}` },
+  }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------

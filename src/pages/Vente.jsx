@@ -99,7 +99,8 @@ function Media({ video, image, titre }) {
   if (v?.type === "fichier") {
     return (
       <div className="v-media v-media-video v-apparait">
-        <video src={v.src} poster={image || undefined} controls playsInline preload="metadata" />
+        {/* Sans affiche, #t=0.1 montre la première image au lieu d'un cadre noir. */}
+        <video src={image ? v.src : `${v.src}#t=0.1`} poster={image || undefined} controls playsInline preload="metadata" />
       </div>
     );
   }

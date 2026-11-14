@@ -3252,6 +3252,74 @@ details.avance[open] > summary {
   align-self: flex-start;
 }
 
+/* La vidéo de présentation : aperçu, import depuis l'ordinateur, avancement. */
+.video-offre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.video-offre > .pile {
+  flex: 1 1 240px;
+}
+
+.video-offre-apercu {
+  flex: none;
+  width: 260px;
+  max-width: 100%;
+}
+
+.video-offre-apercu video,
+.video-offre-apercu iframe,
+.video-offre-apercu .image-vide {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--ligne-2);
+  border-radius: var(--rayon-m);
+  background: #000;
+}
+
+.video-offre-apercu .image-vide {
+  background: var(--releve);
+}
+
+.video-offre label.bouton {
+  align-self: flex-start;
+}
+
+.envoi-video {
+  display: grid;
+  gap: 6px;
+  color: var(--encre-2);
+  font-size: 0.86rem;
+}
+
+.envoi-video progress {
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--releve);
+  accent-color: var(--or);
+}
+
+.envoi-video progress::-webkit-progress-bar {
+  background: var(--releve);
+}
+
+.envoi-video progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--violet-clair), var(--or));
+  border-radius: 999px;
+}
+
+.envoi-video progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--violet-clair), var(--or));
+  border-radius: 999px;
+}
+
 .editeur-liste {
   display: flex;
   flex-direction: column;
