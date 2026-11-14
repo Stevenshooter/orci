@@ -32,6 +32,12 @@ supabase/functions   paiement · acces · telegram · google · expirations (Den
   mot de passe oublié » envoie un lien qui ouvre l'espace et fait choisir le mot de
   passe. Un lien de connexion sans mot de passe reste possible en secours. Le
   premier compte connecté devient propriétaire.
+- **Vidéo de présentation** : importée depuis l'onglet Offre (seau de stockage
+  `videos`, MP4 conseillé, 50 Mo au plus sur le plan gratuit) ou lien YouTube.
+  Chaque lecture compte dans la bande passante Supabase (10 Go par mois en
+  gratuit) : une vidéo courte en 720p, ou YouTube si le trafic grossit.
+- **Témoignages clients** : captures ajoutées depuis l'onglet Offre ; elles
+  défilent sur la page de vente sous « Ils nous ont fait confiance ».
 - **E-mails de connexion** : sans serveur d'envoi branché (SMTP), Supabase n'en
   envoie que deux par heure. Le mot de passe évite d'en dépendre.
 - **Secrets** : générés par la base dans le schéma `prive` (jamais exposé par l'API).
