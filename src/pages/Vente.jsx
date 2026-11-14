@@ -114,6 +114,35 @@ function Media({ video, image, titre }) {
   return null;
 }
 
+/**
+ * La vidéo de fond de la section de l'offre, sous un filtre violet. Elle ne se
+ * charge qu'à l'approche de la section et se met en pause hors de l'écran ;
+ * avec le mouvement réduit ou l'économie de données, seule l'image reste.
+ */
+function FondVideo() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || !("IntersectionObserver" in window)) return undefined;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || navigator.connection?.saveData) return undefined;
+    v.muted = true;
+    const o = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) v.play().catch(() => {});
+        else v.pause();
+      },
+      { rootMargin: "200px 0px" },
+    );
+    o.observe(v);
+    return () => o.disconnect();
+  }, []);
+  return (
+    <div className="v-fond-video" aria-hidden="true">
+      <video ref={ref} src="/fonds/colonnes.mp4" poster="/fonds/colonnes.webp" muted loop playsInline preload="none" tabIndex={-1} />
+    </div>
+  );
+}
+
 /** Les captures qui défilent toutes seules (et se parcourent au doigt si le mouvement est réduit). */
 function Defile({ images }) {
   const serie = images.slice(0, 16);
@@ -309,7 +338,8 @@ export default function Vente({ slug }) {
         </section>
       ) : null}
 
-      <section className="v-section" aria-labelledby="titre-offre">
+      <section className="v-section v-section-fond" aria-labelledby="titre-offre">
+        <FondVideo />
         <div className="v-offre v-apparait">
           <h2 className="v-offre-titre" id="titre-offre">{titre}</h2>
           {infos.public ? <p className="v-offre-public">{infos.public}</p> : null}
