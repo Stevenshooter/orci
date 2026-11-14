@@ -1698,6 +1698,17 @@ details.avance[open] > summary {
   color: var(--or);
 }
 
+/* « / mois » d'un abonnement, à côté du prix. */
+.v-prix-periode {
+  color: var(--encre-2);
+  font-weight: 600;
+}
+
+.prix-periode {
+  color: var(--encre-2);
+  font: 600 0.62em var(--texte);
+}
+
 .v-prix-ancien {
   display: inline-flex;
   align-items: center;

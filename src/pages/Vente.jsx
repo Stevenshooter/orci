@@ -258,7 +258,7 @@ export default function Vente({ slug }) {
   const prix = (
     <div className="v-prix">
       <span className="v-prix-montant">{nombre(offre.prix)}</span>
-      <span className="v-prix-devise">FCFA</span>
+      <span className="v-prix-devise">FCFA{mensuel ? <span className="v-prix-periode"> / mois</span> : null}</span>
       {barreAffichee ? (
         <span className="v-prix-ancien">
           <s>{fcfa(offre.prix_barre)}</s>
@@ -406,7 +406,10 @@ export default function Vente({ slug }) {
 
       <div className={`barre-achat ${barre ? "visible" : ""}`} aria-hidden={!barre}>
         <div>
-          <p className="barre-achat-prix">{fcfa(offre.prix)}</p>
+          <p className="barre-achat-prix">
+            {fcfa(offre.prix)}
+            {mensuel ? <span className="prix-periode"> / mois</span> : null}
+          </p>
           {barreAffichee ? <s className="prix-barre">{fcfa(offre.prix_barre)}</s> : null}
         </div>
         <Lien className="v-cta v-cta-compact" href={paiement} tabIndex={barre ? 0 : -1}>Je rejoins</Lien>
