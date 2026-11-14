@@ -78,7 +78,10 @@ export default function Paiement({ slug }) {
       </Lien>
       <div className="recap">
         <p className="recap-titre">{offre.titre}</p>
-        <p className="recap-prix">{fcfa(offre.prix)}</p>
+        <p className="recap-prix">
+          {fcfa(offre.prix)}
+          {offre.facturation === "mensuel" ? <span className="prix-periode"> / mois</span> : null}
+        </p>
       </div>
     </>
   );

@@ -84,7 +84,9 @@ const sansAccent = (t) => String(t ?? "").replace(/\*/g, "");
 if (offre) offre.titre = sansAccent(offre.titre);
 const titre = offre ? `${offre.titre} · ${offre.formateur?.nom ?? "Orci"}` : "Orci";
 const description = sansAccent(offre?.sous_titre) || "Paiement Mobile Money et accès immédiat à la formation.";
-const prix = offre ? `${String(offre.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA` : null;
+const prix = offre
+  ? `${String(offre.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA${offre.facturation === "mensuel" ? " / mois" : ""}`
+  : null;
 const meta = [
   `<title>${echapper(titre)}</title>`,
   `<meta name="description" content="${echapper(description)}" />`,
