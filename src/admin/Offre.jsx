@@ -1,14 +1,17 @@
 // L'offre : ce que dit la page de vente, son prix, et le contact du formateur.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fcfa } from "../lib/format.js";
-import { modifier, televerserImage } from "../lib/supa.js";
+import { cheminStockage, modifier, supprimerFichier, televerser, televerserImage } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { Bouton, Champ, Icone, Message, useTitre } from "../ui.jsx";
 import { useAdmin } from "./Admin.jsx";
 
 const MAX_PREUVES = 12;
 const FORMATS_IMAGE = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+// La vidéo de présentation : 50 Mo, le plafond du plan gratuit de Supabase.
+const FORMATS_VIDEO = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
+const MAX_VIDEO = 50 * 1024 * 1024;
 
 function versFormulaire(offre, formateur) {
   return {
@@ -70,7 +73,22 @@ export default function Offre() {
   const [message, setMessage] = useState(null);
   const [image, setImage] = useState({ envoi: false, erreur: null });
 
-  useEffect(() => setF(original), [original]);
+  // Quand la base change (image, vidéo ou témoignages enregistrés aussitôt),
+  // les saisies en cours sont gardées : seuls les champs changés en base
+  // sont repris.
+  const precedent = useRef(original);
+  useEffect(() => {
+    const avant = precedent.current;
+    precedent.current = original;
+    setF((x) => {
+      if (JSON.stringify(x) === JSON.stringify(avant)) return original;
+      const suite = { ...x };
+      for (const k of Object.keys(original)) {
+        if (JSON.stringify(original[k]) !== JSON.stringify(avant[k])) suite[k] = original[k];
+      }
+      return suite;
+    });
+  }, [original]);
 
   const modifie = JSON.stringify(f) !== JSON.stringify(original);
   const maj = (champ) => (e) => setF((x) => ({ ...x, [champ]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
@@ -112,6 +130,10 @@ export default function Offre() {
           whatsapp: f.whatsapp.replace(/\D/g, "") || null,
         });
       }
+      // Une vidéo importée, puis retirée ou remplacée par un lien : son fichier
+      // ne sert plus, il ne doit pas occuper le stockage.
+      const ancienne = cheminStockage(original.video, "videos");
+      if (ancienne && f.video.trim() !== original.video) supprimerFichier("videos", ancienne);
       await recharger({ silencieux: true });
       setMessage({ type: "succes", texte: "C'est enregistré : la page de vente est à jour." });
     } catch (err) {
@@ -149,7 +171,53 @@ export default function Offre() {
     }
   }
 
-  // Les preuves s'enregistrent aussitôt, comme l'image : elles ne passent pas
+  // La vidéo importée de l'ordinateur s'enregistre aussitôt, comme l'image.
+  const [video, setVideo] = useState({ envoi: false, progression: 0, erreur: null });
+  const apercu = videoIntegree(f.video);
+
+  // Fermer l'onglet pendant l'envoi le couperait : le navigateur prévient.
+  useEffect(() => {
+    if (!video.envoi) return undefined;
+    const retenir = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", retenir);
+    return () => window.removeEventListener("beforeunload", retenir);
+  }, [video.envoi]);
+
+  async function choisirVideo(e) {
+    const fichier = e.target.files?.[0];
+    e.target.value = "";
+    if (!fichier) return;
+    if (!FORMATS_VIDEO[fichier.type]) {
+      setVideo({ envoi: false, progression: 0, erreur: "Une vidéo MP4 (conseillé), WebM ou MOV." });
+      return;
+    }
+    if (fichier.size > MAX_VIDEO) {
+      setVideo({
+        envoi: false,
+        progression: 0,
+        erreur: `Cette vidéo fait ${Math.ceil(fichier.size / 1048576)} Mo : 50 Mo au plus. Raccourcis-la, ou exporte-la en 720p.`,
+      });
+      return;
+    }
+    setVideo({ envoi: true, progression: 0, erreur: null });
+    const ancienne = cheminStockage(offre.infos?.video, "videos");
+    try {
+      const url = await televerser("videos", `offres/${offre.id}/presentation-${Date.now()}.${FORMATS_VIDEO[fichier.type]}`, fichier, {
+        progression: (p) => setVideo((v) => ({ ...v, progression: p })),
+      });
+      await modifier("offres", `id=eq.${offre.id}`, { infos: { ...(offre.infos || {}), video: url } });
+      await recharger({ silencieux: true });
+      setVideo({ envoi: false, progression: 0, erreur: null });
+      if (ancienne) supprimerFichier("videos", ancienne);
+    } catch (err) {
+      setVideo({ envoi: false, progression: 0, erreur: err.message });
+    }
+  }
+
+  // Les témoignages s'enregistrent aussitôt, comme l'image : ils ne passent pas
   // par le bouton « Enregistrer ».
   const preuves = Array.isArray(offre.infos?.preuves) ? offre.infos.preuves : [];
   const [preuve, setPreuve] = useState({ envoi: false, erreur: null });
@@ -165,7 +233,7 @@ export default function Offre() {
     if (!fichiers.length) return;
     const place = MAX_PREUVES - preuves.length;
     if (place <= 0) {
-      setPreuve({ envoi: false, erreur: `${MAX_PREUVES} captures au plus : retires-en une d'abord.` });
+      setPreuve({ envoi: false, erreur: `${MAX_PREUVES} témoignages au plus : retires-en un d'abord.` });
       return;
     }
     const refus = fichiers.find((x) => !FORMATS_IMAGE[x.type] || x.size > 5 * 1024 * 1024);
@@ -182,7 +250,7 @@ export default function Offre() {
       await enregistrerPreuves([...preuves, ...urls]);
       setPreuve({
         envoi: false,
-        erreur: fichiers.length > place ? `Seules ${place} capture(s) ajoutée(s) : ${MAX_PREUVES} au plus.` : null,
+        erreur: fichiers.length > place ? `Seuls ${place} témoignage(s) ajouté(s) : ${MAX_PREUVES} au plus.` : null,
       });
     } catch (err) {
       setPreuve({ envoi: false, erreur: err.message });
@@ -244,16 +312,49 @@ export default function Offre() {
           maxLength={240}
           aide="La grande phrase en haut de la page : la promesse. Entoure un mot d'astérisques pour le mettre en doré, par exemple : vidéos *professionnelles*. Sinon, c'est le mot le plus long."
         />
+        <div className="video-offre">
+          <div className="video-offre-apercu">
+            {apercu?.type === "fichier" ? (
+              <video src={`${apercu.src}#t=0.1`} controls playsInline preload="metadata" />
+            ) : apercu?.type === "youtube" ? (
+              <iframe src={apercu.src} title="Aperçu de la vidéo de présentation" loading="lazy" allowFullScreen />
+            ) : (
+              <div className="image-vide"><Icone nom="camera" taille={28} /></div>
+            )}
+          </div>
+          <div className="pile">
+            <p className="etiquette">Vidéo de présentation</p>
+            <p className="texte-doux petit">
+              Elle s'affiche sous ton accroche. MP4 conseillé, 50 Mo au plus : 1 à 2 minutes en 720p suffisent, et
+              ménagent la bande passante de ton compte Supabase gratuit.
+            </p>
+            <label className={`bouton bouton-discret ${video.envoi ? "en-charge" : ""}`}>
+              {video.envoi ? <span className="roue" aria-hidden="true" /> : <Icone nom="plus" taille={18} />}
+              <span>{apercu?.type === "fichier" ? "Changer la vidéo" : "Importer une vidéo depuis l'ordinateur"}</span>
+              <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={choisirVideo} hidden disabled={video.envoi} />
+            </label>
+            {video.envoi ? (
+              <div className="envoi-video" role="status">
+                <progress value={video.progression} max={1} />
+                <span>Envoi : {Math.round(video.progression * 100)} % — garde cette page ouverte.</span>
+              </div>
+            ) : null}
+            {f.video && !video.envoi ? (
+              <button type="button" className="lien-discret" onClick={() => setF((x) => ({ ...x, video: "" }))}>Retirer la vidéo</button>
+            ) : null}
+            {video.erreur ? <p className="champ-aide champ-aide-erreur">{video.erreur}</p> : null}
+          </div>
+        </div>
         <Champ
-          etiquette="Vidéo de présentation (facultatif)"
+          etiquette="Ou un lien YouTube (facultatif)"
           id="video"
           type="url"
           inputMode="url"
           placeholder="https://youtu.be/…"
-          value={f.video}
+          value={apercu?.type === "fichier" ? "" : f.video}
           onChange={maj("video")}
           erreur={erreurs.video}
-          aide="Un lien YouTube (même non répertorié) ou un lien direct vers un fichier .mp4. Elle s'affiche sous l'accroche, à la place de l'image."
+          aide="À la place d'une vidéo importée. YouTube, même non répertorié, ne consomme pas la bande passante de ton compte."
         />
         <Champ
           etiquette="Description détaillée (facultatif)"
@@ -280,17 +381,18 @@ export default function Offre() {
       </section>
 
       <section className="carte pile">
-        <h2 className="titre-carte">Ils nous ont fait confiance</h2>
+        <h2 className="titre-carte">Témoignages clients</h2>
         <p className="texte-doux petit">
-          Des captures de résultats ou de messages d'élèves, avec leur accord. Elles défilent sur la page de vente, juste
-          après le bouton. {MAX_PREUVES} au plus ; sans capture, la partie ne s'affiche pas.
+          Des captures de messages ou de résultats de tes élèves, avec leur accord. Elles défilent toutes seules sur ta
+          page de vente, sous « Ils nous ont fait confiance », juste après le bouton. {MAX_PREUVES} au plus ; sans
+          témoignage, cette partie ne s'affiche pas.
         </p>
         {preuves.length ? (
           <ul className="preuves-admin">
             {preuves.map((src, i) => (
               <li key={src}>
-                <img src={src} alt={`Capture ${i + 1}`} loading="lazy" />
-                <button type="button" className="icone-bouton" aria-label={`Retirer la capture ${i + 1}`} onClick={() => retirerPreuve(src)} disabled={preuve.envoi}>
+                <img src={src} alt={`Témoignage ${i + 1}`} loading="lazy" />
+                <button type="button" className="icone-bouton" aria-label={`Retirer le témoignage ${i + 1}`} onClick={() => retirerPreuve(src)} disabled={preuve.envoi}>
                   <Icone nom="poubelle" taille={16} />
                 </button>
               </li>
@@ -299,7 +401,7 @@ export default function Offre() {
         ) : null}
         <label className={`bouton bouton-discret ${preuve.envoi ? "en-charge" : ""}`}>
           {preuve.envoi ? <span className="roue" aria-hidden="true" /> : <Icone nom="plus" taille={18} />}
-          <span>Ajouter des captures</span>
+          <span>Ajouter des témoignages</span>
           <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={ajouterPreuves} hidden disabled={preuve.envoi || preuves.length >= MAX_PREUVES} />
         </label>
         {preuve.erreur ? <p className="champ-aide champ-aide-erreur">{preuve.erreur}</p> : null}
