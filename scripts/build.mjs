@@ -4,9 +4,9 @@
 //   node scripts/build.mjs --dev    lisible, avec cartes de source
 //
 // L'aperçu des liens partagés (WhatsApp, Facebook…) ne lit pas le JavaScript :
-// le titre, la description et l'image de l'offre sont donc écrits dans
-// index.html au moment de la construction. Après avoir changé l'offre, un
-// nouveau déploiement rafraîchit cet aperçu.
+// le titre, la description et l'image de l'accueil sont donc écrits dans
+// index.html au moment de la construction. Après avoir changé le prix du
+// Premium ou ajouté une série, un nouveau déploiement rafraîchit cet aperçu.
 
 import { createRequire } from "node:module";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -56,17 +56,17 @@ const js = "/" + path.relative(dist, path.join(racine, entree[0])).split(path.se
 const css = entree[1].cssBundle ? "/" + path.relative(dist, path.join(racine, entree[1].cssBundle)).split(path.sep).join("/") : null;
 
 // ---------------------------------------------------------------------------
-// Aperçu des liens : l'offre publiée, si la base répond.
+// Aperçu des liens : le catalogue des séries, si la base répond.
 // ---------------------------------------------------------------------------
 
 function echapper(t) {
   return String(t ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-async function offrePubliee() {
+async function catalogue() {
   if (!SUPABASE_URL || !SUPABASE_CLE || process.env.ORCI_SANS_APERCU) return null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/offre_publique`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/catalogue`, {
       method: "POST",
       headers: { apikey: SUPABASE_CLE, "Content-Type": "application/json" },
       body: "{}",
@@ -78,23 +78,26 @@ async function offrePubliee() {
   }
 }
 
-const offre = await offrePubliee();
-// Les astérisques marquent le mot doré de la page : pas dans les aperçus de partage.
-const sansAccent = (t) => String(t ?? "").replace(/\*/g, "");
-if (offre) offre.titre = sansAccent(offre.titre);
-const titre = offre ? `${offre.titre} · ${offre.formateur?.nom ?? "Orci"}` : "Orci";
-const description = sansAccent(offre?.sous_titre) || "Paiement Mobile Money et accès immédiat à la formation.";
-const prix = offre
-  ? `${String(offre.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA${offre.facturation === "mensuel" ? " / mois" : ""}`
+// L'accueil est le catalogue des mini-séries : l'aperçu montre le prix du
+// Premium et la pochette de la série la plus récente.
+const cat = await catalogue();
+const premium = cat?.premium ?? null;
+const pochette = (cat?.series ?? []).find((s) => s.pochette_url)?.pochette_url ?? null;
+const titre = "Orci · Mini-séries IA";
+const prix = premium
+  ? `${String(premium.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA${premium.facturation === "mensuel" ? " / mois" : ""}`
   : null;
+const description = prix
+  ? `La suite de toutes les séries IA, dès leur sortie. Premium : ${prix}, payé en Mobile Money.`
+  : "La suite de toutes les séries IA, dès leur sortie.";
 const meta = [
   `<title>${echapper(titre)}</title>`,
   `<meta name="description" content="${echapper(description)}" />`,
   `<meta property="og:type" content="website" />`,
-  `<meta property="og:title" content="${echapper(prix ? `${offre.titre} — ${prix}` : titre)}" />`,
+  `<meta property="og:title" content="${echapper(titre)}" />`,
   `<meta property="og:description" content="${echapper(description)}" />`,
-  offre?.image_url ? `<meta property="og:image" content="${echapper(offre.image_url)}" />` : "",
-  `<meta name="twitter:card" content="${offre?.image_url ? "summary_large_image" : "summary"}" />`,
+  pochette ? `<meta property="og:image" content="${echapper(pochette)}" />` : "",
+  `<meta name="twitter:card" content="${pochette ? "summary_large_image" : "summary"}" />`,
 ]
   .filter(Boolean)
   .join("\n    ");
@@ -112,4 +115,4 @@ const poids = sorties
   .filter(([f]) => !f.endsWith(".map"))
   .map(([f, o]) => `  ${path.relative(dist, path.join(racine, f))}  ${(o.bytes / 1024).toFixed(1)} Ko`)
   .join("\n");
-console.log(`Orci construit dans dist/${offre ? ` (aperçu : « ${offre.titre} »)` : " (aperçu générique)"}\n${poids}`);
+console.log(`Orci construit dans dist/${premium ? ` (aperçu : Premium à ${prix})` : " (aperçu générique)"}\n${poids}`);

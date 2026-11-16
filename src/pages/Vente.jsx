@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fcfa, lienWhatsApp, nombre } from "../lib/format.js";
 import { nomMoyen, paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
-import { Lien } from "../lib/routeur.jsx";
+import { Lien, naviguer } from "../lib/routeur.jsx";
 import { rpc } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { accesConnu, idVisiteur, sourceVisite } from "../lib/visiteur.js";
@@ -192,6 +192,11 @@ export default function Vente({ slug }) {
     rpc("enregistrer_vue", { p_offre: offre.id, p_visiteur: idVisiteur(), p_source: sourceVisite() }).catch(() => {});
   }, [offre?.id]);
 
+  // Le Premium n'a pas de page de vente : il se vend depuis les séries.
+  useEffect(() => {
+    if (offre?.series) naviguer("/", { remplacer: true });
+  }, [offre?.series]);
+
   const racine = useRef(null);
   useApparition(racine, offre?.id);
 
@@ -223,6 +228,7 @@ export default function Vente({ slug }) {
     );
   }
   if (!offre) return <Introuvable texte="Cette formation n'est pas en vente pour le moment." />;
+  if (offre.series) return <div className="page page-centree"><Chargement /></div>;
 
   const paiement = `/o/${offre.slug}/paiement${window.location.search}`;
   const barreAffichee = offre.prix_barre && offre.prix_barre > offre.prix;

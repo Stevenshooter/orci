@@ -6,6 +6,7 @@ import Acces from "./pages/Acces.jsx";
 import Attente from "./pages/Attente.jsx";
 import Introuvable from "./pages/Introuvable.jsx";
 import Paiement from "./pages/Paiement.jsx";
+import { Catalogue, Serie } from "./pages/Series.jsx";
 import Vente from "./pages/Vente.jsx";
 import { Chargement } from "./ui.jsx";
 
@@ -24,7 +25,13 @@ function App() {
   const { chemin } = useAdresse();
   let p;
 
-  if (chemin === "/") return <Vente slug={null} />;
+  // L'accueil : les mini-séries. Une série garde la même page d'une partie à
+  // l'autre (même clé), pour que le lecteur enchaîne sans se recharger.
+  if (chemin === "/") return <Catalogue />;
+  if ((p = correspond("/s/:slug", chemin))) return <Serie key={p.slug} slug={p.slug} numero={null} />;
+  if ((p = correspond("/s/:slug/:numero", chemin))) {
+    return <Serie key={p.slug} slug={p.slug} numero={Number.parseInt(p.numero, 10) || null} />;
+  }
   if ((p = correspond("/o/:slug", chemin))) return <Vente key={p.slug} slug={p.slug} />;
   if ((p = correspond("/o/:slug/paiement", chemin))) return <Paiement key={p.slug} slug={p.slug} />;
   if ((p = correspond("/paiement/:reference", chemin))) return <Attente key={p.reference} reference={p.reference} />;

@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, sessionActuelle } from "../lib/supa.js";
-import { cleConnue, retenirAcces } from "../lib/visiteur.js";
+import { cleConnue, marquerBienvenue, oublierRetour, retenirAcces, retourApresPaiement } from "../lib/visiteur.js";
 import { Bouton, Chargement, Icone, LienBouton, Message, useTitre } from "../ui.jsx";
 
 const INTERVALLE = 3000;
@@ -55,7 +55,13 @@ export default function Attente({ reference }) {
       if (r?.statut === "paye") {
         if (r.jeton) {
           retenirAcces(r.offre?.slug, r.jeton);
-          minuteur = setTimeout(() => naviguer(`/acces/${r.jeton}`, { remplacer: true }), 1400);
+          // Payé depuis une partie fermée : on y retourne, la suite est ouverte.
+          const suite = retourApresPaiement(r.offre?.slug);
+          if (suite) {
+            oublierRetour();
+            marquerBienvenue();
+          }
+          minuteur = setTimeout(() => naviguer(suite || `/acces/${r.jeton}`, { remplacer: true }), 1400);
         }
         return;
       }

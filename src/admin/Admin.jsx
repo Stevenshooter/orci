@@ -10,6 +10,7 @@ import Connexion from "./Connexion.jsx";
 import { motDePasseConnu, PanneauMotDePasse, reporterMotDePasse } from "./MotDePasse.jsx";
 import Offre from "./Offre.jsx";
 import Outils from "./Outils.jsx";
+import Series from "./Series.jsx";
 import Tableau from "./Tableau.jsx";
 
 // Le lien magique est lu une seule fois : un second rendu ne doit pas le
@@ -182,6 +183,7 @@ function EspaceProprietaire({ chemin, email, methode, recuperation }) {
   const page = {
     "/admin": Tableau,
     "/admin/connexion": Tableau,
+    "/admin/series": Series,
     "/admin/acheteurs": Acheteurs,
     "/admin/offre": Offre,
     "/admin/outils": Outils,
@@ -189,6 +191,7 @@ function EspaceProprietaire({ chemin, email, methode, recuperation }) {
 
   const onglets = [
     ["/admin", "Tableau", "graphique"],
+    ["/admin/series", "Séries", "lecture"],
     ["/admin/acheteurs", "Acheteurs", "personnes"],
     ["/admin/offre", "Offre", "crayon"],
     ["/admin/outils", "Outils", "engrenage"],
