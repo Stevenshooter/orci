@@ -13,7 +13,7 @@ import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
 import { coordonneesConnues, retenirCle, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
 import { paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
-import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, SelectPays, useDonnees, useTitre } from "../ui.jsx";
+import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, NavigateurIntegre, SelectPays, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const OPERATEURS = [
@@ -163,6 +163,7 @@ export default function Paiement({ slug }) {
   return (
     <div className="page page-etroite paiement">
       {entete}
+      <NavigateurIntegre />
 
       {test ? (
         <div className="bandeau-test bandeau-formulaire" role="note">

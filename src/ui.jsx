@@ -1,6 +1,7 @@
 // Les briques d'interface partagées par la page de vente et l'espace admin.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { estAndroid, lienNavigateur, navigateurIntegre } from "./lib/navigateur.js";
 import { moyensDuPays, NOMS_MOYENS, PAYS, paysDe } from "./lib/pays.js";
 
 // ---------------------------------------------------------------------------
@@ -153,6 +154,46 @@ export function Message({ type = "info", titre, children, action }) {
         {children ? <div className="message-texte">{children}</div> : null}
         {action ? <div className="message-action">{action}</div> : null}
       </div>
+    </div>
+  );
+}
+
+/** Dans le navigateur de TikTok (ou d'Instagram, de Facebook) : proposer le vrai navigateur. */
+export function NavigateurIntegre() {
+  const [appli] = useState(() => navigateurIntegre());
+  const [ferme, setFerme] = useState(false);
+  const [copie, setCopie] = useState(false);
+  if (!appli || ferme) return null;
+  const android = estAndroid();
+
+  async function copier() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopie(true);
+    } catch {
+      window.prompt("Copie ce lien, puis colle-le dans ton navigateur :", window.location.href);
+    }
+  }
+
+  return (
+    <div className="integre">
+      <Message
+        titre="Ouvre cette page dans ton navigateur"
+        action={
+          <>
+            {android ? (
+              <a className="bouton bouton-or" href={lienNavigateur()}>Ouvrir dans le navigateur</a>
+            ) : (
+              <button type="button" className="bouton bouton-or" onClick={copier}>{copie ? "Lien copié" : "Copier le lien"}</button>
+            )}
+            <button type="button" className="bouton bouton-discret" onClick={() => setFerme(true)}>Continuer ici</button>
+          </>
+        }
+      >
+        Tu es dans {appli}. Pour payer sans souci et rejoindre les groupes après le paiement, ouvre la page dans{" "}
+        {android ? "Chrome." : "Safari : touche ••• en haut à droite, puis « Ouvrir dans le navigateur »."}
+        {android ? <span className="integre-aide"> Si rien ne se passe : touche ⋮ en haut à droite, puis « Ouvrir dans le navigateur ».</span> : null}
+      </Message>
     </div>
   );
 }

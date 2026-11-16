@@ -649,6 +649,23 @@ details.avance[open] > summary {
   margin-top: 6px;
 }
 
+/* Bandeau « ouvre la page dans ton navigateur » (TikTok, Instagram, Facebook). */
+.integre {
+  margin: 14px 0;
+  text-align: left;
+}
+
+.integre .message-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.integre-aide {
+  color: var(--encre-3);
+}
+
 .message-info .message-icone {
   color: var(--lien);
 }
