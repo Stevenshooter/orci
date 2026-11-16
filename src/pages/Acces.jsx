@@ -5,7 +5,7 @@ import { date, dateHeure, lienWhatsApp } from "../lib/format.js";
 import { Lien } from "../lib/routeur.jsx";
 import { fonction } from "../lib/supa.js";
 import { retenirAcces } from "../lib/visiteur.js";
-import { Bouton, Champ, Chargement, Copier, Icone, ICONE_OUTIL, LienBouton, Message, useDonnees, useTitre } from "../ui.jsx";
+import { Bouton, Champ, Chargement, Copier, Icone, ICONE_OUTIL, LienBouton, Message, NavigateurIntegre, useDonnees, useTitre } from "../ui.jsx";
 
 export default function Acces({ jeton }) {
   const { donnees: vue, erreur, charge, recharger, remplacer } = useDonnees(
@@ -58,6 +58,8 @@ export default function Acces({ jeton }) {
         <p className="acces-offre">{offre.titre}</p>
         {acces.fin && actif ? <p className="acces-fin">Accès ouvert jusqu'au {date(acces.fin)}</p> : null}
       </header>
+
+      <NavigateurIntegre />
 
       {!actif ? (
         <Message

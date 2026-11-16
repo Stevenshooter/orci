@@ -11,7 +11,7 @@ import { Lien } from "../lib/routeur.jsx";
 import { rpc } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { accesConnu, idVisiteur, sourceVisite } from "../lib/visiteur.js";
-import { Chargement, Icone, ICONE_OUTIL, Message, MoyensPaiement, SelectPays, useDonnees, useTitre } from "../ui.jsx";
+import { Chargement, Icone, ICONE_OUTIL, Message, MoyensPaiement, NavigateurIntegre, SelectPays, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
 
 const PROMESSE = {
@@ -310,6 +310,8 @@ export default function Vente({ slug }) {
           </a>
         ) : null}
       </header>
+
+      <NavigateurIntegre />
 
       {jeton ? (
         <div className="v-deja">
