@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { devinerOperateur, fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
-import { coordonneesConnues, retenirCle, retenirCoordonnees, sourceVisite } from "../lib/visiteur.js";
+import { coordonneesConnues, retenirCle, retenirCoordonnees, retourApresPaiement, sourceVisite } from "../lib/visiteur.js";
 import { paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
 import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, NavigateurIntegre, SelectPays, useDonnees, useTitre } from "../ui.jsx";
 import Introuvable from "./Introuvable.jsx";
@@ -73,9 +73,15 @@ export default function Paiement({ slug }) {
 
   const entete = (
     <>
-      <Lien className="lien-retour" href={`/o/${offre.slug}${window.location.search}`}>
-        <Icone nom="retour" taille={18} /> Retour à la formation
-      </Lien>
+      {offre.series ? (
+        <Lien className="lien-retour" href={retourApresPaiement(offre.slug) || "/"}>
+          <Icone nom="retour" taille={18} /> Retour aux séries
+        </Lien>
+      ) : (
+        <Lien className="lien-retour" href={`/o/${offre.slug}${window.location.search}`}>
+          <Icone nom="retour" taille={18} /> Retour à la formation
+        </Lien>
+      )}
       <div className="recap">
         <p className="recap-titre">{offre.titre}</p>
         <p className="recap-prix">

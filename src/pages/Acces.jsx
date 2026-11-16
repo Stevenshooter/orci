@@ -73,6 +73,16 @@ export default function Acces({ jeton }) {
         </Message>
       ) : null}
 
+      {offre.series && actif ? (
+        <section className="carte acces-series">
+          <p><strong>Ton Premium est actif.</strong> La suite de toutes les séries est ouverte, sur ce téléphone et partout où tu ouvres ce lien.</p>
+          <Lien className="bouton bouton-or bouton-large" href="/">
+            <Icone nom="lecture" taille={18} />
+            <span>Regarder les séries</span>
+          </Lien>
+        </section>
+      ) : null}
+
       <section className="carte garde-lien">
         <div className="garde-lien-tete">
           <Icone nom="cadenas" taille={20} />

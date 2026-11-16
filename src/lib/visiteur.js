@@ -103,3 +103,62 @@ export function retenirAcces(slug, jeton) {
   a[slug] = jeton;
   ecrireLocal("orci.acces", a);
 }
+
+// ---------------------------------------------------------------------------
+// Mini-séries
+// ---------------------------------------------------------------------------
+
+/** La dernière partie regardée, série par série : l'accueil propose de reprendre. */
+export function partieVue(slug) {
+  const v = lireLocal("orci.vu") || {};
+  return Number.isInteger(v[slug]) ? v[slug] : null;
+}
+
+export function retenirPartie(slug, numero) {
+  const v = lireLocal("orci.vu") || {};
+  if (v[slug] === numero) return;
+  v[slug] = numero;
+  ecrireLocal("orci.vu", v);
+}
+
+/**
+ * Avant de payer le Premium depuis une partie fermée : la page où revenir une
+ * fois le paiement acquis. Deux heures au plus, sinon on retombe sur « Mes accès ».
+ */
+export function retenirRetour(slug, chemin) {
+  ecrireLocal("orci.retour", { slug, chemin, t: Date.now() });
+}
+
+export function retourApresPaiement(slug) {
+  const r = lireLocal("orci.retour");
+  if (!r || r.slug !== slug || typeof r.chemin !== "string") return null;
+  if (!r.chemin.startsWith("/") || r.chemin.startsWith("//") || Date.now() - Number(r.t || 0) > 2 * 3600_000) return null;
+  return r.chemin;
+}
+
+export function oublierRetour() {
+  try {
+    localStorage.removeItem("orci.retour");
+  } catch {
+    // rien à oublier
+  }
+}
+
+/** Le paiement Premium vient d'aboutir : la série accueille l'abonné une fois. */
+export function marquerBienvenue() {
+  try {
+    sessionStorage.setItem("orci.bienvenue", "1");
+  } catch {
+    // pas de message d'accueil, rien de grave
+  }
+}
+
+export function lireBienvenue() {
+  try {
+    const v = sessionStorage.getItem("orci.bienvenue") === "1";
+    sessionStorage.removeItem("orci.bienvenue");
+    return v;
+  } catch {
+    return false;
+  }
+}

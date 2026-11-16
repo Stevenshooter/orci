@@ -7,8 +7,11 @@
 //   voir     { jeton }          → l'offre, l'état de l'accès et de chaque outil
 //   telegram { jeton }          → un lien d'entrée personnel, valable 24 h, une seule personne
 //   email    { jeton, email }   → l'adresse Google pour Drive et les lives Meet
+//   episode  { serie, numero, jeton? } → la vidéo d'une partie de série : libre
+//            si la partie est gratuite, sinon réservée à un accès Premium actif
+//            (et au propriétaire connecté, qui vérifie ses vidéos).
 
-import { admin, emailValide, erreur, json, lireCorps, preflight, texte } from "../_shared/base.ts";
+import { admin, emailValide, erreur, json, lireCorps, preflight, proprietaire, texte } from "../_shared/base.ts";
 import * as google from "../_shared/google.ts";
 import { livrer } from "../_shared/livraison.ts";
 import * as telegram from "../_shared/telegram.ts";
@@ -22,6 +25,18 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return erreur("Méthode non permise", 405);
 
   const corps = await lireCorps(req);
+
+  // Une partie gratuite se regarde sans lien d'accès : on la sert avant la
+  // vérification du jeton.
+  if (corps.action === "episode") {
+    try {
+      return await episode(req, corps);
+    } catch (e) {
+      console.error("[acces] episode", e);
+      return erreur("La vidéo n'a pas pu s'ouvrir. Réessaie.", 500);
+    }
+  }
+
   const jeton = texte(corps.jeton, 64).toLowerCase();
   if (!/^[0-9a-f]{48}$/.test(jeton)) return erreur("Lien d'accès invalide.", 404);
 
@@ -50,7 +65,7 @@ async function chargerAcces(jeton: string): Promise<Ligne | null> {
     .from("acces")
     .select(
       "id, statut, debut, fin, offre_id, " +
-        "offres(id, titre, slug, image_url, formateur_id, formateurs(nom, whatsapp)), " +
+        "offres(id, titre, slug, image_url, formateur_id, series, formateurs(nom, whatsapp)), " +
         "acheteurs(id, nom, email, telephone)",
     )
     .eq("jeton", jeton)
@@ -138,6 +153,7 @@ async function vue(acces: Ligne): Promise<Record<string, unknown>> {
       titre: acces.offres?.titre,
       slug: acces.offres?.slug,
       image_url: acces.offres?.image_url,
+      series: Boolean(acces.offres?.series),
       formateur: acces.offres?.formateurs ?? null,
     },
     acces: { statut: acces.statut, debut: acces.debut, fin: acces.fin },
@@ -213,4 +229,65 @@ async function enregistrerEmail(acces: Ligne, brut: string): Promise<Response> {
 async function jetonDe(accesId: string): Promise<string> {
   const { data } = await admin().from("acces").select("jeton").eq("id", accesId).single();
   return data?.jeton as string;
+}
+
+// ---------------------------------------------------------------------------
+// Mini-séries
+// ---------------------------------------------------------------------------
+
+/** Durée d'un lien signé : de quoi regarder tranquillement, pas de quoi le faire circuler. */
+const DUREE_LIEN = 4 * 3600;
+
+async function episode(req: Request, corps: Record<string, unknown>): Promise<Response> {
+  const slug = texte(corps.serie, 60).toLowerCase();
+  const numero = Number(corps.numero);
+  if (!/^[a-z0-9-]{2,60}$/.test(slug) || !Number.isInteger(numero) || numero < 1 || numero > 999) {
+    return erreur("Cette partie n'existe pas.", 404);
+  }
+
+  const { data: s, error } = await admin()
+    .from("series")
+    .select("publiee, episodes(numero, video, gratuit)")
+    .eq("slug", slug)
+    .eq("episodes.numero", numero)
+    .maybeSingle();
+  if (error) throw new Error(`Série illisible : ${error.message}`);
+  const ep = s?.episodes?.[0];
+  if (!s || !ep) return erreur("Cette partie n'existe pas.", 404);
+
+  // Le propriétaire voit tout, y compris une série encore en brouillon.
+  if (!s.publiee && !(await proprietaire(req))) return erreur("Cette partie n'existe pas.", 404);
+  if (!ep.gratuit) {
+    const verrou = await verrouPremium(texte(corps.jeton, 64).toLowerCase());
+    if (verrou && !(await proprietaire(req))) return json(verrou);
+  }
+  return json(await source(ep.video));
+}
+
+/** null si le jeton ouvre le Premium ; sinon la raison pour laquelle la partie reste fermée. */
+async function verrouPremium(jeton: string): Promise<Record<string, unknown> | null> {
+  if (!/^[0-9a-f]{48}$/.test(jeton)) return { verrou: "premium" };
+  const { data: a, error } = await admin()
+    .from("acces")
+    .select("statut, fin, offres!inner(series)")
+    .eq("jeton", jeton)
+    .maybeSingle();
+  if (error) throw new Error(`Accès illisible : ${error.message}`);
+  // deno-lint-ignore no-explicit-any
+  if (!a || !(a as any).offres?.series) return { verrou: "premium" };
+  const ouvert = a.statut === "actif" && (!a.fin || new Date(a.fin).getTime() > Date.now());
+  return ouvert ? null : { verrou: "expire", fin: a.fin };
+}
+
+async function source(video: string): Promise<Record<string, unknown>> {
+  const yt = /^youtube:([A-Za-z0-9_-]{6,20})$/.exec(video);
+  if (yt) {
+    return {
+      type: "youtube",
+      src: `https://www.youtube-nocookie.com/embed/${yt[1]}?rel=0&modestbranding=1&playsinline=1&autoplay=1`,
+    };
+  }
+  const { data, error } = await admin().storage.from("episodes").createSignedUrl(video, DUREE_LIEN);
+  if (error || !data?.signedUrl) throw new Error(`Lien signé impossible : ${error?.message ?? "réponse vide"}`);
+  return { type: "fichier", src: data.signedUrl, expire: Date.now() + DUREE_LIEN * 1000 };
 }

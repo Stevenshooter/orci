@@ -40,6 +40,7 @@ const TRACES = {
   bouclier: "M12 3 4.5 6v5.5c0 4.4 3.1 8.4 7.5 9.5 4.4-1.1 7.5-5.1 7.5-9.5V6zM9 12l2 2 4-4",
   eclair: "M13 2 4.5 13.5H12L11 22l8.5-11.5H12z",
   carte: "M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5zM3 10h18M7 15h3",
+  lecture: "M8 5.6v12.8a.8.8 0 0 0 1.2.7l10-6.4a.8.8 0 0 0 0-1.4l-10-6.4A.8.8 0 0 0 8 5.6z",
 };
 
 export function Icone({ nom, taille = 20, className = "", titre }) {
@@ -190,7 +191,7 @@ export function NavigateurIntegre() {
           </>
         }
       >
-        Tu es dans {appli}. Pour payer sans souci et rejoindre les groupes après le paiement, ouvre la page dans{" "}
+        Tu es dans {appli}. Pour payer sans souci et garder tes accès après le paiement, ouvre la page dans{" "}
         {android ? "Chrome." : "Safari : touche ••• en haut à droite, puis « Ouvrir dans le navigateur »."}
         {android ? <span className="integre-aide"> Si rien ne se passe : touche ⋮ en haut à droite, puis « Ouvrir dans le navigateur ».</span> : null}
       </Message>
