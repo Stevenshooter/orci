@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { fcfa } from "../lib/format.js";
-import { imageLisible, typeImage } from "../lib/image.js";
+import { imageAffiche, typeImage } from "../lib/image.js";
 import { cheminStockage, inserer, lire, modifier, supprimer, supprimerFichier, televerser, televerserImage } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { Bouton, Champ, Chargement, Confirmer, Copier, Icone, Message, useDonnees, useTitre } from "../ui.jsx";
@@ -14,6 +14,8 @@ import { useAdmin } from "./Admin.jsx";
 const MAX_VIDEO = 50 * 1024 * 1024;
 const FORMATS_VIDEO = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };
 const FORMATS_IMAGE = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+// Des idées pour le champ « Genre » : l'accueil en tire ses filtres et ses rangées.
+const GENRES = ["Mystique", "Drame", "Horreur", "Suspense", "Trahison", "Jalousie", "Vengeance", "Famille", "Comédie", "Fantastique"];
 
 function versSlug(t) {
   return String(t ?? "")
@@ -214,7 +216,8 @@ function LigneSerie({ serie, onOuvrir }) {
       <span className="serie-ligne-corps">
         <strong>{serie.titre}</strong>
         <span className="texte-doux petit">
-          {n} partie{n > 1 ? "s" : ""} · {serie.publiee ? <span className="texte-succes">En ligne</span> : "Brouillon"}
+          {n} partie{n > 1 ? "s" : ""} · {serie.genre ? `${serie.genre} · ` : ""}
+          {serie.publiee ? <span className="texte-succes">En ligne</span> : "Brouillon"}
         </span>
       </span>
       <Bouton variante="discret" icone="crayon" onClick={onOuvrir}>Gérer</Bouton>
@@ -224,22 +227,39 @@ function LigneSerie({ serie, onOuvrir }) {
 
 function EditeurSerie({ serie, formateurId, pris, onFermer, onCree, onChange }) {
   const nouvelle = !serie;
-  const [f, setF] = useState({ titre: serie?.titre ?? "", synopsis: serie?.synopsis ?? "", publiee: serie?.publiee ?? false });
+  const [f, setF] = useState({
+    titre: serie?.titre ?? "",
+    synopsis: serie?.synopsis ?? "",
+    genre: serie?.genre ?? "",
+    publiee: serie?.publiee ?? false,
+  });
   const [etat, setEtat] = useState({ envoi: false, message: null });
   const [pochette, setPochette] = useState({ envoi: false, erreur: null });
   const lien = serie ? `${window.location.origin}/s/${serie.slug}` : null;
-  const change = !serie || f.titre !== serie.titre || f.synopsis !== (serie.synopsis ?? "") || f.publiee !== serie.publiee;
+  const change =
+    !serie || f.titre !== serie.titre || f.synopsis !== (serie.synopsis ?? "") || f.genre !== (serie.genre ?? "") || f.publiee !== serie.publiee;
 
   async function enregistrer(e) {
     e.preventDefault();
     const titre = f.titre.trim();
+    const genre = f.genre.trim().replace(/\s+/g, " ");
     if (!titre) {
       setEtat({ envoi: false, message: { type: "erreur", texte: "Donne un titre à ta série." } });
       return;
     }
+    if (genre.length === 1) {
+      setEtat({ envoi: false, message: { type: "erreur", texte: "Le genre doit faire au moins 2 lettres." } });
+      return;
+    }
     setEtat({ envoi: true, message: null });
     try {
-      const valeurs = { titre, synopsis: f.synopsis.trim() || null, publiee: f.publiee };
+      // Même écriture pour tous : « mystique » et « Mystique » font un seul filtre.
+      const valeurs = {
+        titre,
+        synopsis: f.synopsis.trim() || null,
+        genre: genre ? genre[0].toLocaleUpperCase("fr") + genre.slice(1) : null,
+        publiee: f.publiee,
+      };
       if (nouvelle) {
         const [cree] = await inserer("series", { ...valeurs, formateur_id: formateurId, slug: slugLibre(titre, pris) });
         onCree(cree.id);
@@ -269,7 +289,7 @@ function EditeurSerie({ serie, formateurId, pris, onFermer, onCree, onChange }) 
     }
     setPochette({ envoi: true, erreur: null });
     try {
-      const fichier = await imageLisible(brut, { cote: 1600, qualite: 0.85 });
+      const fichier = await imageAffiche(brut);
       if (fichier.size > 5 * 1024 * 1024) throw new Error("L'image dépasse 5 Mo. Réduis-la avant de l'envoyer.");
       const url = await televerserImage(`series/${serie.id}/pochette-${Date.now()}.${FORMATS_IMAGE[fichier.type] ?? "jpg"}`, fichier);
       await modifier("series", `id=eq.${serie.id}`, { pochette_url: url });
@@ -312,6 +332,21 @@ function EditeurSerie({ serie, formateurId, pris, onFermer, onCree, onChange }) 
             placeholder="Deux phrases qui donnent envie de voir la suite."
           />
         </div>
+        <Champ
+          etiquette="Genre (facultatif)"
+          id={`genre-${serie?.id ?? "nouvelle"}`}
+          value={f.genre}
+          onChange={(e) => setF((x) => ({ ...x, genre: e.target.value }))}
+          maxLength={30}
+          list="genres-orci"
+          placeholder="Mystique"
+          aide="Il crée les filtres et les rangées de l'accueil. Choisis dans la liste ou écris le tien."
+        />
+        <datalist id="genres-orci">
+          {GENRES.map((g) => (
+            <option key={g} value={g} />
+          ))}
+        </datalist>
         <label className="interrupteur">
           <input type="checkbox" checked={f.publiee} onChange={(e) => setF((x) => ({ ...x, publiee: e.target.checked }))} />
           <span className="interrupteur-piste" aria-hidden="true" />
