@@ -7,7 +7,7 @@
 //   voir     { jeton }          → l'offre, l'état de l'accès et de chaque outil
 //   telegram { jeton }          → un lien d'entrée personnel, valable 24 h, une seule personne
 //   email    { jeton, email }   → l'adresse Google pour Drive et les lives Meet
-//   episode  { serie, numero, jeton? } → la vidéo d'une partie de série : libre
+//   episode  { serie, numero, jeton?, prechargement? } → la vidéo d'une partie de série : libre
 //            si la partie est gratuite, sinon réservée à un accès Premium actif
 //            (et au propriétaire connecté, qui vérifie ses vidéos).
 
@@ -261,7 +261,14 @@ async function episode(req: Request, corps: Record<string, unknown>): Promise<Re
     const verrou = await verrouPremium(texte(corps.jeton, 64).toLowerCase());
     if (verrou && !(await proprietaire(req))) return json(verrou);
   }
-  return json(await source(ep.video));
+  const lien = await source(ep.video);
+  // Une lecture de plus pour le « Top » ; la partie suivante préparée en
+  // avance ne compte pas. Un échec ici ne doit pas priver de la vidéo.
+  if (!corps.prechargement) {
+    const { error: compte } = await admin().rpc("compter_lecture", { p_slug: slug });
+    if (compte) console.error("[acces] lecture non comptée :", compte.message);
+  }
+  return json(lien);
 }
 
 /** null si le jeton ouvre le Premium ; sinon la raison pour laquelle la partie reste fermée. */

@@ -194,7 +194,7 @@ export default function Vente({ slug }) {
 
   // Le Premium n'a pas de page de vente : il se vend depuis les séries.
   useEffect(() => {
-    if (offre?.series) naviguer("/", { remplacer: true });
+    if (offre?.series) naviguer("/premium", { remplacer: true });
   }, [offre?.series]);
 
   const racine = useRef(null);

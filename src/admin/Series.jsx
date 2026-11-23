@@ -216,7 +216,8 @@ function LigneSerie({ serie, onOuvrir }) {
       <span className="serie-ligne-corps">
         <strong>{serie.titre}</strong>
         <span className="texte-doux petit">
-          {n} partie{n > 1 ? "s" : ""} · {serie.genre ? `${serie.genre} · ` : ""}
+          {n} partie{n > 1 ? "s" : ""} · {serie.lectures ? `${serie.lectures} lecture${serie.lectures > 1 ? "s" : ""} · ` : ""}
+          {serie.genre ? `${serie.genre} · ` : ""}
           {serie.publiee ? <span className="texte-succes">En ligne</span> : "Brouillon"}
         </span>
       </span>
