@@ -162,3 +162,31 @@ export function lireBienvenue() {
     return false;
   }
 }
+
+/** Ma liste : les séries gardées pour plus tard, sur ce téléphone. */
+export function maListe() {
+  const l = lireLocal("orci.liste");
+  return Array.isArray(l) ? l.filter((x) => typeof x === "string") : [];
+}
+
+/** Ajoute ou retire une série de la liste ; rend true si elle y est désormais. */
+export function basculerListe(slug) {
+  const l = maListe();
+  const i = l.indexOf(slug);
+  if (i >= 0) l.splice(i, 1);
+  else l.unshift(slug);
+  ecrireLocal("orci.liste", l.slice(0, 100));
+  return i < 0;
+}
+
+/** Où en est la lecture d'une série : la partie, la seconde et la durée. */
+export function positionLecture(slug) {
+  const p = (lireLocal("orci.position") || {})[slug];
+  return p && Number.isInteger(p.numero) ? p : null;
+}
+
+export function retenirPosition(slug, numero, t, d) {
+  const a = lireLocal("orci.position") || {};
+  a[slug] = { numero, t: Math.max(0, Math.round(t || 0)), d: Math.max(0, Math.round(d || 0)), maj: Date.now() };
+  ecrireLocal("orci.position", a);
+}

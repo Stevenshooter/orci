@@ -6,7 +6,12 @@ import Acces from "./pages/Acces.jsx";
 import Attente from "./pages/Attente.jsx";
 import Introuvable from "./pages/Introuvable.jsx";
 import Paiement from "./pages/Paiement.jsx";
-import { Catalogue, Serie } from "./pages/Series.jsx";
+import Accueil from "./pages/series/Accueil.jsx";
+import Explorer from "./pages/series/Explorer.jsx";
+import Fiche from "./pages/series/Fiche.jsx";
+import PageLecteur from "./pages/series/Lecteur.jsx";
+import { MaListe, MonAcces } from "./pages/series/Perso.jsx";
+import PagePremium from "./pages/series/Premium.jsx";
 import Vente from "./pages/Vente.jsx";
 import { Chargement } from "./ui.jsx";
 
@@ -25,12 +30,18 @@ function App() {
   const { chemin } = useAdresse();
   let p;
 
-  // L'accueil : les mini-séries. Une série garde la même page d'une partie à
-  // l'autre (même clé), pour que le lecteur enchaîne sans se recharger.
-  if (chemin === "/") return <Catalogue />;
-  if ((p = correspond("/s/:slug", chemin))) return <Serie key={p.slug} slug={p.slug} numero={null} />;
+  // Les mini-séries, organisées comme une appli : accueil, explorer, premium,
+  // ma liste, mon accès ; la fiche d'une série, puis son lecteur plein écran.
+  // Le lecteur garde la même clé d'une partie à l'autre : il enchaîne sans se
+  // recharger.
+  if (chemin === "/") return <Accueil />;
+  if (chemin === "/explorer") return <Explorer />;
+  if (chemin === "/premium") return <PagePremium />;
+  if (chemin === "/ma-liste") return <MaListe />;
+  if (chemin === "/mon-acces") return <MonAcces />;
+  if ((p = correspond("/s/:slug", chemin))) return <Fiche key={p.slug} slug={p.slug} />;
   if ((p = correspond("/s/:slug/:numero", chemin))) {
-    return <Serie key={p.slug} slug={p.slug} numero={Number.parseInt(p.numero, 10) || null} />;
+    return <PageLecteur key={p.slug} slug={p.slug} numero={Number.parseInt(p.numero, 10) || 0} />;
   }
   if ((p = correspond("/o/:slug", chemin))) return <Vente key={p.slug} slug={p.slug} />;
   if ((p = correspond("/o/:slug/paiement", chemin))) return <Paiement key={p.slug} slug={p.slug} />;
