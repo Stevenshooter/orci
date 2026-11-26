@@ -105,11 +105,16 @@ export function egal(a: string, b: string): boolean {
 }
 
 /** L'adresse publique du site, pour les retours de paiement et de Google. */
+// Les adresses d'Orci. Un paiement revient sur celle où il a commencé : c'est
+// là que le navigateur garde la clé qui ouvre le lien d'accès.
+const ADRESSES_ORCI = /^https:\/\/((www\.)?orci\.me|orci-five\.vercel\.app)$/;
+
 export async function siteUrl(req?: Request): Promise<string> {
+  const origine = (req?.headers.get("Origin") ?? "").replace(/\/+$/, "");
+  if (ADRESSES_ORCI.test(origine)) return origine;
   const enregistre = await reglage("site_url");
   if (enregistre) return enregistre.replace(/\/+$/, "");
-  const origine = req?.headers.get("Origin");
-  return (origine ?? "https://orci.vercel.app").replace(/\/+$/, "");
+  return "https://www.orci.me";
 }
 
 export function urlFonction(nom: string): string {

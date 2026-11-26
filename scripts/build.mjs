@@ -84,7 +84,8 @@ const cat = await catalogue();
 const premium = cat?.premium ?? null;
 // L'image des aperçus : le logo d'Orci en paysage (1200 × 630). Les pochettes
 // verticales des séries seraient mal recadrées par WhatsApp.
-const site = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || "orci-five.vercel.app"}`;
+// L'adresse officielle : orci.me renvoie vers www.orci.me (réglage Vercel).
+const site = "https://www.orci.me";
 const imageApercu = `${site}/og-orci.jpg`;
 const titre = "Orci · Mini-séries IA";
 const prix = premium
