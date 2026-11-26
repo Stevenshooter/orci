@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { date, dateHeure, lienWhatsApp } from "../lib/format.js";
 import { Lien } from "../lib/routeur.jsx";
 import { fonction } from "../lib/supa.js";
+import { jetonCompte, useCompte } from "../lib/compte.js";
 import { retenirAcces } from "../lib/visiteur.js";
 import { Bouton, Champ, Chargement, Copier, Icone, ICONE_OUTIL, LienBouton, Message, NavigateurIntegre, useDonnees, useTitre } from "../ui.jsx";
 
@@ -17,6 +18,15 @@ export default function Acces({ jeton }) {
   useEffect(() => {
     if (vue?.offre?.slug) retenirAcces(vue.offre.slug, jeton);
   }, [vue?.offre?.slug, jeton]);
+
+  // Connecté à un compte : l'achat de ce lien y est rangé (une seule fois, sans bruit).
+  const compte = useCompte();
+  useEffect(() => {
+    if (!compte || !vue?.offre?.slug) return;
+    jetonCompte()
+      .then((jc) => (jc ? fonction("acces", { action: "lier", jeton, jeton_compte: jc }) : null))
+      .catch(() => {});
+  }, [compte?.uid, vue?.offre?.slug, jeton]);
 
   // Au retour de Telegram ou de WhatsApp, la page se met à jour d'elle-même.
   useEffect(() => {

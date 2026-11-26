@@ -9,10 +9,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { lienWhatsApp } from "../../lib/format.js";
 import { Lien, naviguer } from "../../lib/routeur.jsx";
 import { sessionActuelle } from "../../lib/supa.js";
+import { comptesActifs, useCompte, useRetourGoogle } from "../../lib/compte.js";
 import { lireBienvenue, positionLecture, retenirPartie, retenirPosition } from "../../lib/visiteur.js";
 import { Bouton, Copier, Icone, LienBouton, Message, useDonnees, useTitre } from "../../ui.jsx";
 import Introuvable from "../Introuvable.jsx";
-import { BoutonPremium, chargerCatalogue, ErreurChargement, jetonPremium, lireSource, PageChargement, prixPremium, temps, useVue } from "./commun.jsx";
+import { PorteCompte } from "./Compte.jsx";
+import { BoutonPremium, chargerCatalogue, ErreurChargement, lireSource, PageChargement, prixPremium, temps, useJetonPremium, useVue } from "./commun.jsx";
 
 export default function PageLecteur({ slug, numero }) {
   const { donnees: c, erreur, charge, recharger } = useDonnees(chargerCatalogue, []);
@@ -20,6 +22,7 @@ export default function PageLecteur({ slug, numero }) {
   const partie = serie?.parties.find((p) => p.numero === numero) ?? null;
   useTitre(serie ? `${serie.titre}, partie ${numero} · Orci` : "Orci");
   useVue(c?.premium?.id);
+  const jeton = useJetonPremium(c?.premium);
 
   // Plein écran : la page derrière ne défile plus.
   useEffect(() => {
@@ -35,7 +38,6 @@ export default function PageLecteur({ slug, numero }) {
   if (!serie) return <Introuvable texte="Cette série n'est pas en ligne." />;
 
   const premium = c.premium;
-  const jeton = jetonPremium(premium);
   const contact = c.formateur?.whatsapp
     ? lienWhatsApp(c.formateur.whatsapp, `Bonjour, j'ai payé le Premium mais je n'ai plus mon lien d'accès pour « ${serie.titre} ».`)
     : null;
@@ -50,6 +52,10 @@ function Lecteur({ serie, partie, demandee, premium, jeton, contact }) {
   const suivante = index >= 0 && index < total - 1 ? parties[index + 1] : null;
   const ouverte = (p) => p.gratuit || Boolean(jeton);
   const ici = `/s/${serie.slug}/${demandee}`;
+  const compte = useCompte();
+  const retour = useRetourGoogle();
+  // Regarder demande un compte (gratuit). Le propriétaire connecté à son studio passe.
+  const porte = comptesActifs() && !compte && !sessionActuelle();
 
   const [etat, setEtat] = useState({ statut: "charge" });
   const [essai, setEssai] = useState(0);
@@ -84,6 +90,10 @@ function Lecteur({ serie, partie, demandee, premium, jeton, contact }) {
       setEtat({ statut: "absente" });
       return undefined;
     }
+    if (porte || retour.enCours) {
+      setEtat({ statut: "compte" });
+      return undefined;
+    }
     if (!ouverte(partie) && !sessionActuelle()) {
       setEtat({ statut: "verrou", raison: "premium" });
       return undefined;
@@ -114,7 +124,7 @@ function Lecteur({ serie, partie, demandee, premium, jeton, contact }) {
       annule = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serie.slug, partie?.numero, jeton, essai]);
+  }, [serie.slug, partie?.numero, jeton, essai, porte, retour.enCours]);
 
   // La partie suivante est préparée pendant qu'on regarde : elle démarre sans attendre.
   useEffect(() => {
@@ -226,7 +236,7 @@ function Lecteur({ serie, partie, demandee, premium, jeton, contact }) {
     <div
       className="lecteur-plein"
       onTouchStart={(e) => {
-        if (e.target.closest(".lecteur-bas, .lecteur-haut, .feuille, .verrou, .lecteur-bienvenue, a, button, input")) {
+        if (e.target.closest(".lecteur-bas, .lecteur-haut, .feuille, .verrou, .porte, .lecteur-bienvenue, a, button, input")) {
           toucher.current = null;
           return;
         }
@@ -278,12 +288,18 @@ function Lecteur({ serie, partie, demandee, premium, jeton, contact }) {
         ) : (
           <div className="lecteur-pochette">
             {serie.pochette_url ? <img src={serie.pochette_url} alt="" /> : null}
-            <div className={`lecteur-voile ${etat.statut === "verrou" ? "lecteur-voile-fort" : ""}`}>
+            <div className={`lecteur-voile ${etat.statut === "verrou" || etat.statut === "compte" ? "lecteur-voile-fort" : ""} ${etat.statut === "compte" ? "lecteur-voile-porte" : ""}`}>
               {etat.statut === "charge" ? (
                 <>
                   <span className="roue roue-grande" aria-hidden="true" />
                   <p className="lecteur-voile-texte">Chargement de la partie {demandee}…</p>
                 </>
+              ) : null}
+              {etat.statut === "compte" ? (
+                <PorteCompte
+                  titre="Connecte-toi pour regarder"
+                  texte="C'est gratuit. Tu reprendras où tu t'es arrêté, sur n'importe quel téléphone."
+                />
               ) : null}
               {etat.statut === "verrou" ? <Verrou raison={etat.raison} numero={demandee} premium={premium} ici={ici} contact={contact} /> : null}
               {etat.statut === "absente" ? (

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { devinerOperateur, fcfa, lienWhatsApp } from "../lib/format.js";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { fonction, rpc, sessionActuelle } from "../lib/supa.js";
+import { jetonCompte, useCompte } from "../lib/compte.js";
 import { coordonneesConnues, retenirCle, retenirCoordonnees, retourApresPaiement, sourceVisite } from "../lib/visiteur.js";
 import { paysDe, paysParDefaut, retenirPays } from "../lib/pays.js";
 import { Bouton, Champ, Chargement, Icone, LienBouton, Message, MoyensPaiement, NavigateurIntegre, SelectPays, useDonnees, useTitre } from "../ui.jsx";
@@ -44,6 +45,14 @@ export default function Paiement({ slug }) {
   const [erreurs, setErreurs] = useState({});
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState(null);
+  const compte = useCompte();
+
+  // Connecté : le nom et l'adresse du compte, s'ils ne sont pas déjà remplis.
+  useEffect(() => {
+    if (!compte) return;
+    if (compte.nom) setNom((n) => n || compte.nom);
+    if (compte.email) setEmail((e) => e || compte.email);
+  }, [compte?.uid]);
 
   // Une erreur signalée s'efface dès que l'acheteur corrige le champ.
   const corriger = (champ, poser) => (e) => {
@@ -151,6 +160,8 @@ export default function Paiement({ slug }) {
         email: email.trim().toLowerCase(),
         source: sourceVisite(),
       };
+      const jc = await jetonCompte();
+      if (jc) corps.jeton_compte = jc;
       if (nelsius) retenirPays(pays);
       const r = await fonction("paiement", corps, { session: true });
       retenirCle(r.reference, r.cle);

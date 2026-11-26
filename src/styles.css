@@ -5635,3 +5635,189 @@ details.avance[open] > summary {
     transform: none;
   }
 }
+
+/* -------------------------------------------- Comptes : la porte, le profil */
+
+.porte {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.porte-titre {
+  margin: 0;
+  font: 800 1.25rem/1.25 var(--titre);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.porte-texte {
+  margin: 0;
+  color: var(--encre-2);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.porte-choix,
+.porte-formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bouton-google {
+  border: 1px solid #dadce0;
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.bouton-google:hover:not(:disabled) {
+  background: #f2f2f2;
+}
+
+.porte-ou {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--encre-3);
+  font-size: 0.85rem;
+}
+
+.porte-ou::before,
+.porte-ou::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ligne-2);
+}
+
+.porte-petit {
+  margin: 0;
+  color: var(--encre-2);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.porte-lien {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lien);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.porte-sous-titre {
+  margin: 0;
+  font-weight: 800;
+}
+
+.porte-voir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--encre-2);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.porte-voir input {
+  width: 18px;
+  min-height: 0;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--violet-clair);
+}
+
+.porte-liens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  font-size: 0.86rem;
+}
+
+.porte-erreur,
+.porte-info {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--rayon-s);
+  font-size: 0.88rem;
+}
+
+.porte-erreur {
+  background: var(--erreur-fond);
+  color: var(--erreur);
+}
+
+.porte-info {
+  background: var(--succes-fond);
+  color: var(--succes);
+}
+
+/* Dans le lecteur : la porte se fait défiler si l'écran est petit. */
+.lecteur-voile-porte {
+  justify-content: flex-start;
+  padding-top: calc(76px + env(safe-area-inset-top));
+  overflow-y: auto;
+  touch-action: pan-y;
+  color: var(--encre);
+}
+
+.lecteur-voile-porte .porte {
+  margin: auto;
+}
+
+.profil-carte {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profil-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, var(--violet-clair), var(--violet));
+  color: #fff;
+  font: 800 1.3rem var(--titre);
+}
+
+.profil-identite {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profil-identite p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.profil-nom {
+  font: 800 1.15rem var(--titre);
+}
+
+.avatar-mini {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--violet-clair);
+  color: #fff;
+  font: 800 0.66rem var(--texte);
+  letter-spacing: 0.02em;
+}

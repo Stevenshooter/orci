@@ -10,7 +10,8 @@ import Accueil from "./pages/series/Accueil.jsx";
 import Explorer from "./pages/series/Explorer.jsx";
 import Fiche from "./pages/series/Fiche.jsx";
 import PageLecteur from "./pages/series/Lecteur.jsx";
-import { MaListe, MonAcces } from "./pages/series/Perso.jsx";
+import { Profil } from "./pages/series/Compte.jsx";
+import { MaListe } from "./pages/series/Perso.jsx";
 import PagePremium from "./pages/series/Premium.jsx";
 import Vente from "./pages/Vente.jsx";
 import { Chargement } from "./ui.jsx";
@@ -38,7 +39,7 @@ function App() {
   if (chemin === "/explorer") return <Explorer />;
   if (chemin === "/premium") return <PagePremium />;
   if (chemin === "/ma-liste") return <MaListe />;
-  if (chemin === "/mon-acces") return <MonAcces />;
+  if (chemin === "/profil" || chemin === "/mon-acces") return <Profil />;
   if ((p = correspond("/s/:slug", chemin))) return <Fiche key={p.slug} slug={p.slug} />;
   if ((p = correspond("/s/:slug/:numero", chemin))) {
     return <PageLecteur key={p.slug} slug={p.slug} numero={Number.parseInt(p.numero, 10) || 0} />;
