@@ -102,6 +102,12 @@ export function retenirAcces(slug, jeton) {
   const a = lireLocal("orci.acces") || {};
   a[slug] = jeton;
   ecrireLocal("orci.acces", a);
+  // Les pages ouvertes (le lecteur) se mettent à jour : la suite s'ouvre.
+  try {
+    window.dispatchEvent(new Event("orci-acces"));
+  } catch {
+    // rien
+  }
 }
 
 // ---------------------------------------------------------------------------

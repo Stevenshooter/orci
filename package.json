@@ -9,6 +9,7 @@
     "dev": "node scripts/build.mjs --dev && node scripts/servir.mjs"
   },
   "dependencies": {
+    "firebase": "13.2.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

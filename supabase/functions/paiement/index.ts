@@ -14,7 +14,7 @@
 // de test du bac à sable NelsiusPay.
 //
 // Actions (POST JSON) :
-//   creer   { offre, nom, telephone, operateur, email?, source? } → { reference, cle, mode, test, url }
+//   creer   { offre, nom, telephone, operateur, email?, source?, jeton_compte? } → { reference, cle, mode, test, url }
 //   statut  { reference, cle?, annule? }                           → { statut, jeton?, detenteur, test, … }
 //   simuler { reference, resultat: "paye" | "echec" }              → { statut }  (commande de test, propriétaire)
 //   mode                                                           → { mode, test, … }
@@ -39,6 +39,7 @@ import {
   urlFonction,
 } from "../_shared/base.ts";
 import { appliquerStatut, CHAMPS_SUIVI, type CommandeSuivie, verifierChezFournisseur } from "../_shared/commande.ts";
+import { enregistrerSpectateur, relierAcheteur, verifierCompte } from "../_shared/compte.ts";
 import { lireEtat, nelsiusReel, nelsiusSignatureConfiguree, signatureNelsius, simulerNelsius } from "../_shared/nelsius.ts";
 import { creerPaiement, modePaiement, paiementDeTest } from "../_shared/paiement.ts";
 import { signature } from "../_shared/signature.ts";
@@ -151,12 +152,24 @@ async function creer(req: Request, corps: Record<string, unknown>): Promise<Resp
   // qui revient sans le retaper.
   const champs: Record<string, unknown> = { telephone, nom };
   if (email) champs.email = email;
+  // Un spectateur connecté : l'adresse de son compte sert si aucune n'est donnée.
+  const compte = await verifierCompte(corps.jeton_compte);
+  if (compte && !email && compte.email) champs.email = compte.email;
   const { data: acheteur, error: eA } = await admin()
     .from("acheteurs")
     .upsert(champs, { onConflict: "telephone" })
     .select("id")
     .single();
   if (eA || !acheteur) throw new Error(`Acheteur non enregistré : ${eA?.message}`);
+  // L'achat suit le compte : connecté sur un autre téléphone, on retrouve son Premium.
+  if (compte) {
+    try {
+      await enregistrerSpectateur(compte);
+      await relierAcheteur(acheteur.id, compte.uid);
+    } catch (e) {
+      console.error("[paiement] compte non relié :", e instanceof Error ? e.message : e);
+    }
+  }
 
   const reference = `ORC-${aleatoire(6).toUpperCase()}`;
 

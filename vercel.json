@@ -34,7 +34,7 @@
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!__/).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -47,6 +47,15 @@
         {
           "key": "X-Frame-Options",
           "value": "DENY"
+        }
+      ]
+    },
+    {
+      "source": "/__/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
         }
       ]
     }

@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { fcfa } from "../lib/format.js";
 import { imageAffiche, typeImage } from "../lib/image.js";
-import { cheminStockage, inserer, lire, modifier, supprimer, supprimerFichier, televerser, televerserImage } from "../lib/supa.js";
+import { cheminStockage, inserer, lire, modifier, rpc, supprimer, supprimerFichier, televerser, televerserImage } from "../lib/supa.js";
 import { videoIntegree } from "../lib/video.js";
 import { Bouton, Champ, Chargement, Confirmer, Copier, Icone, Message, useDonnees, useTitre } from "../ui.jsx";
 import { useAdmin } from "./Admin.jsx";
@@ -67,11 +67,12 @@ export default function Series() {
   useTitre("Séries · Orci");
   const { formateur } = useAdmin();
   const d = useDonnees(async () => {
-    const [series, premium] = await Promise.all([
+    const [series, premium, comptes] = await Promise.all([
       lire("series?select=*,episodes(id,numero,titre,video,duree,gratuit)&order=created_at.desc&episodes.order=numero.asc"),
       lire("offres?select=id,slug,prix,facturation,duree_jours,publiee&series=eq.true&order=created_at.asc&limit=1"),
+      rpc("stats_spectateurs").catch(() => null),
     ]);
-    return { series, premium: premium[0] ?? null };
+    return { series, premium: premium[0] ?? null, comptes };
   }, []);
   const [ouverte, setOuverte] = useState(null); // l'id de la série ouverte, ou "nouvelle"
 
@@ -84,7 +85,7 @@ export default function Series() {
     );
   }
 
-  const { series, premium } = d.donnees;
+  const { series, premium, comptes } = d.donnees;
   const recharger = () => d.recharger({ silencieux: true });
   const pris = new Set(series.map((s) => s.slug));
 
@@ -94,6 +95,12 @@ export default function Series() {
         <div>
           <h1>Tes séries</h1>
           <p className="texte-doux">La partie 1 attire sur TikTok ; la suite se débloque avec le Premium.</p>
+          {comptes ? (
+            <p className="texte-doux petit">
+              <Icone nom="personnes" taille={16} /> {comptes.total} compte{comptes.total > 1 ? "s" : ""} spectateur{comptes.total > 1 ? "s" : ""}
+              {comptes.semaine ? ` · ${comptes.semaine} cette semaine` : ""}
+            </p>
+          ) : null}
         </div>
         <a className="bouton bouton-discret" href="/" target="_blank" rel="noopener noreferrer">
           <Icone nom="oeil" taille={18} />

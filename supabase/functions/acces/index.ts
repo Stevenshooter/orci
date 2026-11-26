@@ -7,11 +7,15 @@
 //   voir     { jeton }          → l'offre, l'état de l'accès et de chaque outil
 //   telegram { jeton }          → un lien d'entrée personnel, valable 24 h, une seule personne
 //   email    { jeton, email }   → l'adresse Google pour Drive et les lives Meet
+//   compte   { jeton_compte, nom? } → enregistre le spectateur (jeton Firebase vérifié)
+//            et rend son Premium s'il en a un : { compte, premium: { slug, jeton, statut, fin } }
+//   lier     { jeton, jeton_compte } → relie l'achat de ce lien d'accès au compte connecté
 //   episode  { serie, numero, jeton?, prechargement? } → la vidéo d'une partie de série : libre
 //            si la partie est gratuite, sinon réservée à un accès Premium actif
 //            (et au propriétaire connecté, qui vérifie ses vidéos).
 
 import { admin, emailValide, erreur, json, lireCorps, preflight, proprietaire, texte } from "../_shared/base.ts";
+import { enregistrerSpectateur, relierAcheteur, verifierCompte } from "../_shared/compte.ts";
 import * as google from "../_shared/google.ts";
 import { livrer } from "../_shared/livraison.ts";
 import * as telegram from "../_shared/telegram.ts";
@@ -36,6 +40,14 @@ Deno.serve(async (req) => {
       return erreur("La vidéo n'a pas pu s'ouvrir. Réessaie.", 500);
     }
   }
+  if (corps.action === "compte") {
+    try {
+      return await monCompte(corps);
+    } catch (e) {
+      console.error("[acces] compte", e);
+      return erreur("Ton compte n'a pas pu s'ouvrir. Réessaie.", 500);
+    }
+  }
 
   const jeton = texte(corps.jeton, 64).toLowerCase();
   if (!/^[0-9a-f]{48}$/.test(jeton)) return erreur("Lien d'accès invalide.", 404);
@@ -51,6 +63,8 @@ Deno.serve(async (req) => {
         return await rejoindreTelegram(acces);
       case "email":
         return await enregistrerEmail(acces, texte(corps.email, 254));
+      case "lier":
+        return await lierCompte(acces, corps);
       default:
         return erreur("Action inconnue");
     }
@@ -229,6 +243,40 @@ async function enregistrerEmail(acces: Ligne, brut: string): Promise<Response> {
 async function jetonDe(accesId: string): Promise<string> {
   const { data } = await admin().from("acces").select("jeton").eq("id", accesId).single();
   return data?.jeton as string;
+}
+
+// ---------------------------------------------------------------------------
+// Comptes spectateurs
+// ---------------------------------------------------------------------------
+
+async function monCompte(corps: Record<string, unknown>): Promise<Response> {
+  const c = await verifierCompte(corps.jeton_compte);
+  if (!c) return erreur("Ta connexion a expiré. Reconnecte-toi.", 401);
+  const prenom = texte(corps.nom, 80) || null;
+  await enregistrerSpectateur(c, prenom);
+
+  // Le Premium du compte : l'accès qui dure le plus longtemps parmi ses achats.
+  const { data, error } = await admin()
+    .from("acces")
+    .select("jeton, statut, fin, offres!inner(slug, series), acheteurs!inner(compte)")
+    .eq("acheteurs.compte", c.uid)
+    .eq("offres.series", true)
+    .order("fin", { ascending: false, nullsFirst: true })
+    .limit(1);
+  if (error) throw new Error(`Premium illisible : ${error.message}`);
+  // deno-lint-ignore no-explicit-any
+  const a = (data?.[0] ?? null) as any;
+  return json({
+    compte: { email: c.email, nom: prenom || c.nom, fournisseur: c.fournisseur },
+    premium: a ? { slug: a.offres?.slug, jeton: a.jeton, statut: a.statut, fin: a.fin } : null,
+  });
+}
+
+async function lierCompte(acces: Ligne, corps: Record<string, unknown>): Promise<Response> {
+  const c = await verifierCompte(corps.jeton_compte);
+  if (!c) return erreur("Ta connexion a expiré. Reconnecte-toi.", 401);
+  await enregistrerSpectateur(c);
+  return json({ lie: await relierAcheteur(acces.acheteurs.id, c.uid) });
 }
 
 // ---------------------------------------------------------------------------

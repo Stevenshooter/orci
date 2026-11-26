@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fcfa, lienWhatsApp } from "../../lib/format.js";
 import { Lien } from "../../lib/routeur.jsx";
 import { fonction, rpc } from "../../lib/supa.js";
+import { comptesActifs, initiales, useCompte } from "../../lib/compte.js";
 import { accesConnu, idVisiteur, partieVue, positionLecture, retenirRetour, sourceVisite } from "../../lib/visiteur.js";
 import { Bouton, Chargement, Icone, MarqueOrci, Message } from "../../ui.jsx";
 
@@ -56,6 +57,17 @@ export function useVue(offreId) {
 
 export function jetonPremium(premium) {
   return premium ? accesConnu(premium.slug) : null;
+}
+
+/** Le lien d'accès Premium, relu quand il arrive (paiement, connexion au compte). */
+export function useJetonPremium(premium) {
+  const [, setN] = useState(0);
+  useEffect(() => {
+    const f = () => setN((n) => n + 1);
+    window.addEventListener("orci-acces", f);
+    return () => window.removeEventListener("orci-acces", f);
+  }, []);
+  return jetonPremium(premium);
 }
 
 /** « 1 000 FCFA / mois », d'un seul tenant : un bouton ne le coupe jamais en deux. */
@@ -175,13 +187,28 @@ export function ErreurChargement({ erreur, recharger }) {
 // L'habillage de l'appli
 // ---------------------------------------------------------------------------
 
-const MENU = [
-  ["/", "Accueil", "maison"],
-  ["/explorer", "Explorer", "loupe"],
-  ["/premium", "Premium", "ticket"],
-  ["/ma-liste", "Ma liste", "signet"],
-  ["/mon-acces", "Mon accès", "personne"],
-];
+// Le dernier onglet : « Profil » quand les comptes sont branchés, sinon « Mon accès ».
+function menu() {
+  return [
+    ["/", "Accueil", "maison"],
+    ["/explorer", "Explorer", "loupe"],
+    ["/premium", "Premium", "ticket"],
+    ["/ma-liste", "Ma liste", "signet"],
+    comptesActifs() ? ["/profil", "Profil", "personne"] : ["/mon-acces", "Mon accès", "personne"],
+  ];
+}
+
+/** L'icône d'un onglet ; celle du profil devient les initiales du spectateur connecté. */
+function IconeMenu({ icone, compte }) {
+  if (icone === "personne" && compte) {
+    return (
+      <span className="avatar-mini" aria-hidden="true">
+        {initiales(compte)}
+      </span>
+    );
+  }
+  return <Icone nom={icone} taille={20} />;
+}
 
 function Logo() {
   return (
@@ -198,6 +225,8 @@ function Logo() {
  * pages qui ont leur propre barre (la fiche d'une série).
  */
 export function Coquille({ actif = null, premium, jeton, dock = true, entete = true, children }) {
+  const compte = useCompte();
+  const MENU = menu();
   return (
     <div className={`app ${dock ? "app-avec-dock" : ""}`}>
       <aside className="app-cote">
@@ -205,7 +234,7 @@ export function Coquille({ actif = null, premium, jeton, dock = true, entete = t
         <nav className="app-menu" aria-label="Menu">
           {MENU.map(([href, texte, icone]) => (
             <Lien key={href} href={href} className={`app-menu-lien ${actif === href ? "actif" : ""}`} aria-current={actif === href ? "page" : undefined}>
-              <Icone nom={icone} taille={20} />
+              <IconeMenu icone={icone} compte={compte} />
               <span>{texte}</span>
             </Lien>
           ))}
@@ -243,7 +272,7 @@ export function Coquille({ actif = null, premium, jeton, dock = true, entete = t
               aria-current={actif === href ? "page" : undefined}
             >
               <span className="app-dock-icone">
-                <Icone nom={icone} taille={20} />
+                <IconeMenu icone={icone} compte={compte} />
               </span>
               <span>{texte}</span>
             </Lien>
