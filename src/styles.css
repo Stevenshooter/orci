@@ -2446,22 +2446,10 @@ details.avance[open] > summary {
 }
 
 .logo-marque {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 4px solid var(--violet-clair);
-}
-
-.logo-marque::after {
-  content: "";
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--or);
+  display: block;
+  flex: none;
+  width: auto;
+  height: 1.5em;
 }
 
 .logo-grand {

@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Lien, naviguer } from "../lib/routeur.jsx";
 import { deconnecter, fonction, lire, rpc, sessionActuelle, sessionDepuisAdresse, surSession } from "../lib/supa.js";
-import { Bouton, Chargement, Icone, Message, useDonnees } from "../ui.jsx";
+import { Bouton, Chargement, Icone, MarqueOrci, Message, useDonnees } from "../ui.jsx";
 import Acheteurs from "./Acheteurs.jsx";
 import Connexion from "./Connexion.jsx";
 import { motDePasseConnu, PanneauMotDePasse, reporterMotDePasse } from "./MotDePasse.jsx";
@@ -204,7 +204,7 @@ function EspaceProprietaire({ chemin, email, methode, recuperation }) {
         <header className="admin-entete">
           <div className="admin-entete-ligne">
             <Lien href="/admin" className="logo" aria-label="Orci, tableau de bord">
-              <span className="logo-marque" aria-hidden="true" />
+              <MarqueOrci className="logo-marque" />
               Orci
             </Lien>
             <div className="admin-compte">

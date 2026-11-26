@@ -1,0 +1,14 @@
+{
+  "name": "Orci · Mini-séries IA",
+  "short_name": "Orci",
+  "description": "La suite de tes mini-séries IA, partie après partie.",
+  "lang": "fr",
+  "start_url": "/?source=ecran-accueil",
+  "display": "browser",
+  "background_color": "#09080E",
+  "theme_color": "#09080E",
+  "icons": [
+    { "src": "/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

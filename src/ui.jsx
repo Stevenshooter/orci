@@ -62,6 +62,21 @@ const TRACES = {
   grille: "M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z",
 };
 
+/**
+ * Le logo d'Orci : deux écrans d'épisode et un bouton lecture doré. Les mêmes
+ * formes que public/favicon.svg et que les icônes PNG (repère de l'image
+ * d'origine, 1254 px).
+ */
+export function MarqueOrci({ className = "" }) {
+  return (
+    <svg className={className} viewBox="318 278 590 650" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <rect x="378" y="307" width="400" height="570" rx="70" fill="#592CDF" transform="rotate(-15 578 592)" />
+      <rect x="504" y="344" width="400" height="570" rx="70" fill="#8659FC" />
+      <polygon points="620,528 620,730 802,629" fill="#F5BD5E" stroke="#F5BD5E" strokeWidth="48" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Icone({ nom, taille = 20, className = "", titre }) {
   const d = TRACES[nom] || TRACES.info;
   return (
