@@ -10,7 +10,7 @@ import { fcfa, lienWhatsApp } from "../../lib/format.js";
 import { Lien } from "../../lib/routeur.jsx";
 import { fonction, rpc } from "../../lib/supa.js";
 import { accesConnu, idVisiteur, partieVue, positionLecture, retenirRetour, sourceVisite } from "../../lib/visiteur.js";
-import { Bouton, Chargement, Icone, Message } from "../../ui.jsx";
+import { Bouton, Chargement, Icone, MarqueOrci, Message } from "../../ui.jsx";
 
 // Chargé une fois : passer d'une page à l'autre ne redemande rien au serveur.
 let catalogueEnCours = null;
@@ -186,7 +186,7 @@ const MENU = [
 function Logo() {
   return (
     <Lien href="/" className="logo" aria-label="Orci, accueil">
-      <span className="logo-marque" aria-hidden="true" />
+      <MarqueOrci className="logo-marque" />
       Orci
     </Lien>
   );

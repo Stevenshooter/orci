@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { connexionMotDePasse, envoyerLien, envoyerReinitialisation, verifierCode } from "../lib/supa.js";
-import { Bouton, Champ, Icone, Message, useTitre } from "../ui.jsx";
+import { Bouton, Champ, Icone, MarqueOrci, Message, useTitre } from "../ui.jsx";
 import { ChampMotDePasse, retenirMotDePasse } from "./MotDePasse.jsx";
 
 function emailRetenu() {
@@ -227,7 +227,7 @@ export default function Connexion({ retour }) {
   return (
     <div className="page page-etroite connexion">
       <div className="logo logo-grand">
-        <span className="logo-marque" aria-hidden="true" />
+        <MarqueOrci className="logo-marque" />
         Orci
       </div>
       {carte}

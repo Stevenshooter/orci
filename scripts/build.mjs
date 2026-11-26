@@ -79,10 +79,13 @@ async function catalogue() {
 }
 
 // L'accueil est le catalogue des mini-séries : l'aperçu montre le prix du
-// Premium et la pochette de la série la plus récente.
+// Premium, avec le logo en image.
 const cat = await catalogue();
 const premium = cat?.premium ?? null;
-const pochette = (cat?.series ?? []).find((s) => s.pochette_url)?.pochette_url ?? null;
+// L'image des aperçus : le logo d'Orci en paysage (1200 × 630). Les pochettes
+// verticales des séries seraient mal recadrées par WhatsApp.
+const site = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || "orci-five.vercel.app"}`;
+const imageApercu = `${site}/og-orci.jpg`;
 const titre = "Orci · Mini-séries IA";
 const prix = premium
   ? `${String(premium.prix).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA${premium.facturation === "mensuel" ? " / mois" : ""}`
@@ -96,8 +99,12 @@ const meta = [
   `<meta property="og:type" content="website" />`,
   `<meta property="og:title" content="${echapper(titre)}" />`,
   `<meta property="og:description" content="${echapper(description)}" />`,
-  pochette ? `<meta property="og:image" content="${echapper(pochette)}" />` : "",
-  `<meta name="twitter:card" content="${pochette ? "summary_large_image" : "summary"}" />`,
+  `<meta property="og:site_name" content="Orci" />`,
+  `<meta property="og:image" content="${echapper(imageApercu)}" />`,
+  `<meta property="og:image:width" content="1200" />`,
+  `<meta property="og:image:height" content="630" />`,
+  `<meta property="og:image:alt" content="Le logo d'Orci : deux écrans et un bouton lecture doré" />`,
+  `<meta name="twitter:card" content="summary_large_image" />`,
 ]
   .filter(Boolean)
   .join("\n    ");
