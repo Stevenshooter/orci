@@ -19,6 +19,14 @@
   ],
   "rewrites": [
     {
+      "source": "/__/auth/:chemin*",
+      "destination": "https://orci-9e4ad.firebaseapp.com/__/auth/:chemin*"
+    },
+    {
+      "source": "/__/firebase/:chemin*",
+      "destination": "https://orci-9e4ad.firebaseapp.com/__/firebase/:chemin*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

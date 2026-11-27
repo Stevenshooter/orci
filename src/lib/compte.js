@@ -68,12 +68,21 @@ export function initiales(c) {
   return ((mots[0]?.[0] ?? "") + (c?.nom ? mots[1]?.[0] ?? "" : "")).toUpperCase() || "?";
 }
 
+// Sur orci.me, la connexion Google passe par le site lui-même : vercel.json
+// relaie /__/auth et /__/firebase vers Firebase. Le retour de Google reste
+// ainsi sur la même adresse, ce que Safari et le navigateur de TikTok exigent.
+// Ailleurs (essais en local, aperçus Vercel) : l'adresse de Firebase.
+function configuration() {
+  const hote = typeof location === "undefined" ? "" : location.hostname;
+  return /^(www\.)?orci\.me$/.test(hote) ? { ...FIREBASE, authDomain: location.host } : FIREBASE;
+}
+
 async function charger() {
   if (!comptesActifs()) throw new Error("Les comptes ne sont pas encore ouverts.");
   if (!firebase) {
     firebase = (async () => {
       const [{ initializeApp }, auth] = await Promise.all([import("firebase/app"), import("firebase/auth")]);
-      const a = auth.getAuth(initializeApp(FIREBASE));
+      const a = auth.getAuth(initializeApp(configuration()));
       a.languageCode = "fr";
       auth.onAuthStateChanged(a, (u) => {
         if (!u) {
@@ -125,8 +134,18 @@ export async function connexionGoogle() {
   const p = new auth.GoogleAuthProvider();
   p.setCustomParameters({ prompt: "select_account" });
   await auth.signInWithRedirect(a, p).catch((e) => {
+    // Google ne s'est pas ouvert : aucun retour à attendre au prochain chargement.
+    oublierGoogle();
     throw traduire(e);
   });
+}
+
+function oublierGoogle() {
+  try {
+    sessionStorage.removeItem(GOOGLE_EN_COURS);
+  } catch {
+    // rien
+  }
 }
 
 function googleEnCours() {
@@ -156,11 +175,7 @@ export const retourGoogle = (() => {
     } catch (e) {
       throw traduire(e);
     } finally {
-      try {
-        sessionStorage.removeItem(GOOGLE_EN_COURS);
-      } catch {
-        // rien
-      }
+      oublierGoogle();
     }
   })();
 })();
